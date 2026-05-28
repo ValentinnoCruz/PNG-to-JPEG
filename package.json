@@ -1,7 +1,7 @@
 {
   "name": "png-to-jpeg-metadata-converter",
-  "version": "1.0.0",
-  "description": "Offline PNG to JPEG converter with metadata copy and verification report.",
+  "version": "2.0.0",
+  "description": "Offline PNG to JPEG converter with explicit custom metadata preservation and verification report.",
   "main": "main.js",
   "author": "Val Cruz",
   "scripts": {

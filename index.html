@@ -3,25 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PNG to JPEG Metadata Converter</title>
+  <title>PNG to JPEG Metadata Converter v2</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="app-shell">
     <section class="hero">
       <div>
-        <p class="eyebrow">Offline QA Utility</p>
+        <p class="eyebrow">Offline QA Utility · v2</p>
         <h1>PNG to JPEG Metadata Converter</h1>
-        <p class="subtitle">Convert PNG files to high-quality JPEGs, copy metadata, and generate a verification report.</p>
+        <p class="subtitle">Convert PNG files to high-quality JPEGs, preserve custom project metadata, and generate a pass/fail verification report.</p>
       </div>
       <div class="hero-badge">PNG → JPG</div>
+    </section>
+
+    <section class="card notice-card">
+      <h2>What v2 does differently</h2>
+      <p>This version does not only rely on a basic metadata copy. It extracts your custom PNG fields and embeds them into the JPEG as JSON in multiple places: JPEG Comment, EXIF UserComment, XMP Description, and a sidecar JSON file.</p>
     </section>
 
     <section class="card">
       <div class="card-header">
         <div>
           <h2>1. Check required tools</h2>
-          <p>Uses ImageMagick for conversion and ExifTool for metadata copy/verification.</p>
+          <p>Uses ImageMagick for conversion and ExifTool for metadata extraction, embedding, and verification.</p>
         </div>
         <button id="checkToolsBtn" class="primary">Check Tools</button>
       </div>
@@ -51,7 +56,7 @@
     </section>
 
     <section class="card settings-card">
-      <h2>4. Conversion settings</h2>
+      <h2>4. Conversion and verification settings</h2>
       <div class="settings-grid">
         <label>
           JPEG Quality
@@ -63,16 +68,16 @@
         </label>
       </div>
       <label class="full-label">
-        Metadata tags to verify after copy
-        <textarea id="verifyTagsInput" rows="4">ImageWidth, ImageHeight, XResolution, YResolution, DateTimeOriginal, CreateDate, ModifyDate, GPSLatitude, GPSLongitude, ColorSpace, ICC_Profile, Zone, Table, Tray, Location</textarea>
+        Required project metadata fields
+        <textarea id="verifyTagsInput" rows="5">Timestamp, Location-index, CameraType, Ptz, PtzParameters, RoomCoordinates, ImagingDevice, CameraTableLocation, BaselineHeight, Location</textarea>
       </label>
-      <p class="hint">The app exports full metadata dumps for every source PNG and output JPG. The CSV compares dimensions plus the specific tags listed above.</p>
+      <p class="hint">These defaults match the fields found in your original PNG metadata. The CSV will show which fields were found in the PNG, preserved directly in the JPEG, or preserved inside the embedded JSON block.</p>
     </section>
 
     <section class="card action-card">
       <div>
         <h2>5. Convert and verify</h2>
-        <p>Creates JPEGs, copies metadata, then writes a report CSV and metadata dump files.</p>
+        <p>Creates JPEGs, copies standard metadata, embeds custom PNG metadata, then writes a CSV report and metadata dump files.</p>
       </div>
       <button id="convertBtn" class="primary big">Start Conversion</button>
     </section>

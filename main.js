@@ -1,11 +1,23 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
-const fs = require('fs');
 const fsp = require('fs/promises');
 const { spawn, spawnSync } = require('child_process');
 
 const APP_ID = 'com.valcruz.pngjpegmetadata';
 app.setAppUserModelId(APP_ID);
+
+const DEFAULT_PROJECT_TAGS = [
+  'Timestamp',
+  'Location-index',
+  'CameraType',
+  'Ptz',
+  'PtzParameters',
+  'RoomCoordinates',
+  'ImagingDevice',
+  'CameraTableLocation',
+  'BaselineHeight',
+  'Location'
+];
 
 let mainWindow;
 let resolvedMagick = null;
@@ -13,8 +25,8 @@ let resolvedExifTool = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1180,
-    height: 820,
+    width: 1200,
+    height: 860,
     minWidth: 980,
     minHeight: 700,
     autoHideMenuBar: true,
@@ -45,15 +57,11 @@ function toolCandidates(toolName) {
   const exeName = process.platform === 'win32' ? `${toolName}.exe` : toolName;
   const candidates = [];
 
-  // Packaged app: tools folder copied as extraResources.
   if (process.resourcesPath) {
     candidates.push(path.join(process.resourcesPath, 'tools', exeName));
   }
 
-  // Development/source folder.
   candidates.push(path.join(__dirname, 'tools', exeName));
-
-  // PATH fallback.
   candidates.push(toolName);
   if (process.platform === 'win32') candidates.push(exeName);
 
@@ -172,29 +180,97 @@ function normalizeMetadataValue(value) {
   return String(value).trim();
 }
 
-function compareRequestedTags(sourceMeta, destMeta, requestedTags) {
-  const problems = [];
-  const checked = [];
+function requestedTagList(raw) {
+  const tags = String(raw || '')
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 
-  for (const rawTag of requestedTags) {
-    const tag = rawTag.trim();
-    if (!tag) continue;
+  return [...new Set(tags)];
+}
 
-    const sourceValue = normalizeMetadataValue(sourceMeta[tag]);
-    const destValue = normalizeMetadataValue(destMeta[tag]);
+function extractProjectMetadata(sourceMeta, requestedTags) {
+  const projectMetadata = {};
+  const missingFromSource = [];
 
-    // If source does not have this tag, skip it instead of failing the file.
-    if (!sourceValue) continue;
-
-    checked.push(tag);
-    if (!destValue) {
-      problems.push(`${tag}: source has value but JPEG is missing it`);
-    } else if (sourceValue !== destValue) {
-      problems.push(`${tag}: source='${sourceValue}' JPEG='${destValue}'`);
+  for (const tag of requestedTags) {
+    const value = sourceMeta[tag];
+    const normalized = normalizeMetadataValue(value);
+    if (normalized) {
+      projectMetadata[tag] = value;
+    } else {
+      missingFromSource.push(tag);
     }
   }
 
-  return { checked, problems };
+  return { projectMetadata, missingFromSource };
+}
+
+function tryParseJson(value) {
+  if (!value) return null;
+  const text = normalizeMetadataValue(value);
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function findEmbeddedMetadata(jpegMeta) {
+  const candidates = [
+    jpegMeta.UserComment,
+    jpegMeta.Comment,
+    jpegMeta.Description,
+    jpegMeta.ImageDescription
+  ];
+
+  for (const candidate of candidates) {
+    const parsed = tryParseJson(candidate);
+    if (parsed && parsed.projectMetadata && typeof parsed.projectMetadata === 'object') {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function compareProjectTags(sourceMeta, jpegMeta, embeddedMeta, requestedTags) {
+  const checked = [];
+  const directPreserved = [];
+  const embeddedPreserved = [];
+  const missing = [];
+  const mismatched = [];
+
+  const embeddedProject = embeddedMeta?.projectMetadata || {};
+
+  for (const tag of requestedTags) {
+    const sourceValue = normalizeMetadataValue(sourceMeta[tag]);
+    if (!sourceValue) continue;
+
+    checked.push(tag);
+
+    const directValue = normalizeMetadataValue(jpegMeta[tag]);
+    const embeddedValue = normalizeMetadataValue(embeddedProject[tag]);
+
+    if (directValue && directValue === sourceValue) {
+      directPreserved.push(tag);
+      continue;
+    }
+
+    if (embeddedValue && embeddedValue === sourceValue) {
+      embeddedPreserved.push(tag);
+      continue;
+    }
+
+    if (!directValue && !embeddedValue) {
+      missing.push(tag);
+    } else {
+      mismatched.push(`${tag}: source='${sourceValue}' JPEG/direct='${directValue}' JPEG/embedded='${embeddedValue}'`);
+    }
+  }
+
+  return { checked, directPreserved, embeddedPreserved, missing, mismatched };
 }
 
 async function getDimensions(filePath) {
@@ -224,6 +300,12 @@ function outputPathFor(sourceFile, options) {
   }
 
   return path.join(outputDir, baseName);
+}
+
+function sidecarPathFor(destinationFile) {
+  const dir = path.dirname(destinationFile);
+  const base = path.basename(destinationFile, path.extname(destinationFile));
+  return path.join(dir, `${base}_metadata.json`);
 }
 
 ipcMain.handle('check-dependencies', async () => {
@@ -287,7 +369,6 @@ ipcMain.handle('select-output-folder', async () => {
 });
 
 ipcMain.handle('start-conversion', async (event, options) => {
-
   const depCheck = {
     magick: resolveTool('magick', ['-version']),
     exiftool: resolveTool('exiftool', ['-ver'])
@@ -306,7 +387,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
 
   const quality = String(Number(options.quality || 95));
   const background = options.background || 'white';
-  const requestedTags = String(options.verifyTags || '').split(',').map((tag) => tag.trim()).filter(Boolean);
+  const requestedTags = requestedTagList(options.verifyTags || DEFAULT_PROJECT_TAGS.join(', '));
   const reportRows = [];
   const startedAt = new Date();
   const reportStamp = startedAt.toISOString().replace(/[:.]/g, '-');
@@ -321,6 +402,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
   for (let i = 0; i < files.length; i++) {
     const sourceFile = files[i];
     const destinationFile = outputPathFor(sourceFile, options);
+    const sidecarFile = sidecarPathFor(destinationFile);
     const fileLabel = path.basename(sourceFile);
 
     event.sender.send('convert-progress', {
@@ -334,14 +416,20 @@ ipcMain.handle('start-conversion', async (event, options) => {
     const row = {
       SourceFile: sourceFile,
       OutputFile: destinationFile,
+      SidecarJson: sidecarFile,
       Status: 'Unknown',
       SourceWidth: '',
       SourceHeight: '',
       JpegWidth: '',
       JpegHeight: '',
       DimensionsMatch: '',
-      MetadataTagsChecked: '',
-      MetadataWarnings: '',
+      RequiredTagsChecked: '',
+      MissingFromSourcePNG: '',
+      PreservedDirectInJpeg: '',
+      PreservedInEmbeddedJson: '',
+      MissingFromJpeg: '',
+      MismatchedFields: '',
+      EmbeddedMetadataLocations: 'JPEG Comment; EXIF UserComment; XMP Description; sidecar JSON',
       Error: ''
     };
 
@@ -358,6 +446,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
         destinationFile
       ]);
 
+      // First attempt a broad metadata copy. This often preserves standard EXIF/XMP/ICC data.
       await runCommand(resolvedExifTool, [
         '-overwrite_original',
         '-TagsFromFile', sourceFile,
@@ -366,10 +455,35 @@ ipcMain.handle('start-conversion', async (event, options) => {
         destinationFile
       ]);
 
-      const [sourceDims, jpegDims, sourceMeta, jpegMeta] = await Promise.all([
+      const sourceMeta = await getMetadataJson(sourceFile);
+      const { projectMetadata, missingFromSource } = extractProjectMetadata(sourceMeta, requestedTags);
+
+      const embeddedPayload = {
+        metadataSchema: 'png-to-jpeg-project-metadata-v1',
+        sourceFileName: path.basename(sourceFile),
+        outputFileName: path.basename(destinationFile),
+        createdAt: new Date().toISOString(),
+        note: 'Custom PNG metadata preserved as JSON because PNG text chunks do not map cleanly to JPEG fields.',
+        projectMetadata
+      };
+
+      const embeddedJson = JSON.stringify(embeddedPayload);
+      await fsp.writeFile(sidecarFile, JSON.stringify(embeddedPayload, null, 2), 'utf8');
+
+      // Explicit preservation pass: embed the custom PNG fields into multiple JPEG-readable places.
+      // This is the important v2 change.
+      await runCommand(resolvedExifTool, [
+        '-overwrite_original',
+        `-Comment=${embeddedJson}`,
+        `-UserComment=${embeddedJson}`,
+        `-ImageDescription=${embeddedJson}`,
+        `-XMP-dc:Description=${embeddedJson}`,
+        destinationFile
+      ]);
+
+      const [sourceDims, jpegDims, jpegMeta] = await Promise.all([
         getDimensions(sourceFile),
         getDimensions(destinationFile),
-        getMetadataJson(sourceFile),
         getMetadataJson(destinationFile)
       ]);
 
@@ -378,21 +492,29 @@ ipcMain.handle('start-conversion', async (event, options) => {
       row.JpegWidth = jpegDims.width;
       row.JpegHeight = jpegDims.height;
       row.DimensionsMatch = sourceDims.width === jpegDims.width && sourceDims.height === jpegDims.height ? 'Yes' : 'No';
+      row.MissingFromSourcePNG = missingFromSource.join('; ');
 
-      const tagResult = compareRequestedTags(sourceMeta, jpegMeta, requestedTags);
-      row.MetadataTagsChecked = tagResult.checked.join('; ');
-      row.MetadataWarnings = tagResult.problems.join(' | ');
+      const embeddedFromJpeg = findEmbeddedMetadata(jpegMeta);
+      const tagResult = compareProjectTags(sourceMeta, jpegMeta, embeddedFromJpeg, requestedTags);
+
+      row.RequiredTagsChecked = tagResult.checked.join('; ');
+      row.PreservedDirectInJpeg = tagResult.directPreserved.join('; ');
+      row.PreservedInEmbeddedJson = tagResult.embeddedPreserved.join('; ');
+      row.MissingFromJpeg = tagResult.missing.join('; ');
+      row.MismatchedFields = tagResult.mismatched.join(' | ');
 
       const safeBase = path.basename(sourceFile, path.extname(sourceFile)).replace(/[^a-z0-9_-]/gi, '_');
       const unique = `${String(i + 1).padStart(4, '0')}_${safeBase}`;
       await fsp.writeFile(path.join(dumpsDir, `${unique}_source_png_metadata.txt`), await getMetadataText(sourceFile), 'utf8');
       await fsp.writeFile(path.join(dumpsDir, `${unique}_output_jpg_metadata.txt`), await getMetadataText(destinationFile), 'utf8');
+      await fsp.writeFile(path.join(dumpsDir, `${unique}_embedded_metadata.json`), JSON.stringify(embeddedPayload, null, 2), 'utf8');
 
-      if (row.DimensionsMatch !== 'Yes' || row.MetadataWarnings) {
+      const hasWarnings = row.DimensionsMatch !== 'Yes' || row.MissingFromJpeg || row.MismatchedFields || !embeddedFromJpeg;
+      if (hasWarnings) {
         row.Status = 'Converted with warnings';
         warningCount++;
       } else {
-        row.Status = 'Converted';
+        row.Status = 'Converted and verified';
         successCount++;
       }
 
@@ -401,7 +523,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
         total: files.length,
         file: sourceFile,
         message: `${row.Status}: ${fileLabel}`,
-        level: row.Status === 'Converted' ? 'success' : 'warn'
+        level: row.Status === 'Converted and verified' ? 'success' : 'warn'
       });
     } catch (error) {
       row.Status = 'Failed';
@@ -425,11 +547,11 @@ ipcMain.handle('start-conversion', async (event, options) => {
 
   const summaryPath = path.join(reportDir, 'summary.txt');
   await fsp.writeFile(summaryPath, [
-    'PNG to JPEG Metadata Converter - Summary',
+    'PNG to JPEG Metadata Converter v2 - Summary',
     `Started: ${startedAt.toString()}`,
     `Finished: ${new Date().toString()}`,
     `Total PNG files: ${files.length}`,
-    `Converted cleanly: ${successCount}`,
+    `Converted and verified: ${successCount}`,
     `Converted with warnings: ${warningCount}`,
     `Failed: ${failCount}`,
     '',
@@ -437,9 +559,15 @@ ipcMain.handle('start-conversion', async (event, options) => {
     `Report CSV: ${reportPath}`,
     `Metadata dumps: ${dumpsDir}`,
     '',
-    'Important:',
-    'JPEG cannot store transparency. Transparent PNG pixels were flattened against the selected background color.',
-    'The CSV verifies dimensions and the requested metadata tags. Full source/output metadata dumps are included for deeper comparison.'
+    'What v2 verifies:',
+    '1. JPEG dimensions match the source PNG.',
+    '2. Standard metadata copy is attempted using ExifTool.',
+    '3. Required custom PNG fields are extracted and embedded as JSON into the JPEG Comment, EXIF UserComment, XMP Description, and a sidecar JSON file.',
+    '4. The CSV reports whether each required field was preserved directly or inside the embedded JSON block.',
+    '',
+    'Important limitation:',
+    'JPEG cannot store PNG transparency. Transparent pixels are flattened against the selected background color.',
+    'If your backend currently reads PNG text chunks only, the backend may need to be updated to read the embedded JPEG JSON or the sidecar JSON.'
   ].join('\n'), 'utf8');
 
   return {
