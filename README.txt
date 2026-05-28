@@ -1,19 +1,32 @@
-PNG to JPEG Metadata Converter v3
+PNG to JPEG Metadata Converter v4
 =================================
 
 What this app does
 ------------------
 1. Converts PNG images to JPEG files.
 2. Preserves image dimensions.
-3. Copies standard metadata using ExifTool when possible.
-4. Extracts the custom project metadata fields from the PNG.
-5. Writes those fields into the JPEG as individual XMP tags.
-6. Also stores the same custom metadata as a JSON backup in JPEG Comment, EXIF UserComment, XMP Description, and a sidecar JSON file.
-7. Generates a CSV report and full metadata dump files for every source/output pair.
+3. Optionally uses a real current JPEG as a metadata template.
+4. Copies the template JPEG metadata shell first: EXIF, JFIF, XMP, ICC/profile metadata when ExifTool can write it.
+5. Extracts the custom project metadata fields from each PNG.
+6. Writes those PNG project fields into the final JPEG as individual XMP tags, overwriting matching template fields.
+7. Also stores the same custom metadata as a JSON backup in JPEG Comment, EXIF UserComment, XMP Description, and a sidecar JSON file.
+8. Generates a CSV report and full metadata dump files for every source/template/output set.
 
-Why v3 exists
+Why v4 exists
 -------------
-Your current JPEG sample stores project-specific fields directly in XMP, for example:
+Your test goal is not only to preserve the fields the backend needs, but to emulate the metadata structure of a real current JPEG upload as closely as possible.
+
+v3 wrote the project fields as individual XMP tags. v4 adds template mode:
+
+  Real JPEG template = camera/app metadata shell and defaults
+  Original PNG       = image pixels and actual project-specific metadata
+  Final JPEG         = converted PNG image + template metadata + PNG project fields overwriting matching XMP fields
+
+Use a template JPEG when you want your converted test images to look more like the current production/current-iteration JPEG files.
+
+Project fields overwritten from the PNG
+---------------------------------------
+These fields are extracted from the PNG and written as individual XMP tags in the output JPEG:
 
 - Timestamp
 - Location-index
@@ -26,7 +39,26 @@ Your current JPEG sample stores project-specific fields directly in XMP, for exa
 - RoomCoordinates
 - Location
 
-v2 preserved those fields as embedded JSON, which was useful as a backup. v3 is stricter: it writes each field as its own XMP tag and verifies each one in the output JPEG.
+Template metadata behavior
+--------------------------
+If you select a template JPEG, the app first runs a metadata copy from the template to the output JPEG.
+
+This is intended for fields like:
+
+- Make
+- Model
+- Software
+- ExposureTime
+- SerialNumber
+- ColorSpace
+- DateTimeOriginal/CreateDate/ModifyDate
+- ResolutionUnit/XResolution/YResolution
+- ICC/profile metadata
+- Other real JPEG/XMP/EXIF fields present in the template
+
+Then the app writes the PNG project fields as XMP tags so they reflect the specific source PNG image, not the template image.
+
+Important: the app does not invent arbitrary EXIF fields. If you need Make/Model/Software/etc., provide a real current JPEG template that already has those fields.
 
 Important ExifTool config note
 ------------------------------
@@ -43,6 +75,16 @@ If your backend requires a specific XMP namespace URI from the camera/developer 
 Important limitation
 --------------------
 JPEG cannot store transparency. Transparent PNG pixels are flattened against the selected background color. The default is white.
+
+Recommended settings
+--------------------
+Start with:
+
+- JPEG Quality: 95
+- Chroma Sampling: 4:2:0
+- Background: white
+
+4:2:0 matches your current JPEG sample more closely than 4:4:4. Use 4:4:4 only if the devs/model owners want maximum color fidelity and file size is less important.
 
 Required tools
 --------------
@@ -62,7 +104,7 @@ B) Put magick.exe and exiftool.exe in this app's tools folder before building.
 
 Suggested folder layout
 -----------------------
-PNG_to_JPEG_Metadata_App_v3/
+PNG_to_JPEG_Metadata_App_v4/
   assets/
     icon.ico
   tools/
@@ -111,6 +153,8 @@ Look for these direct XMP fields:
 - RoomCoordinates
 - Location
 
+Also compare the output JPEG against the template JPEG for EXIF/camera fields such as Make, Model, Software, ExposureTime, ColorSpace, SerialNumber, etc.
+
 For namespace-level detail, run:
 
    exiftool -G1 -a -s "converted.jpg"
@@ -119,6 +163,8 @@ Expected pass condition
 -----------------------
 The CSV should show:
 
+- TemplateMode = Yes, if you selected a template JPEG
+- TemplateCopied = Yes ...
 - DimensionsMatch = Yes
 - RequiredTagsChecked includes the project fields found in the PNG
 - PreservedAsIndividualXmpTags includes the project fields

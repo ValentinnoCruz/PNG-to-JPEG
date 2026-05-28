@@ -1,7 +1,8 @@
 const state = {
   files: [],
   sourceRoot: '',
-  outputDir: ''
+  outputDir: '',
+  templateFile: ''
 };
 
 const $ = (id) => document.getElementById(id);
@@ -10,6 +11,8 @@ const checkToolsBtn = $('checkToolsBtn');
 const selectFilesBtn = $('selectFilesBtn');
 const selectFolderBtn = $('selectFolderBtn');
 const selectOutputBtn = $('selectOutputBtn');
+const selectTemplateBtn = $('selectTemplateBtn');
+const clearTemplateBtn = $('clearTemplateBtn');
 const convertBtn = $('convertBtn');
 const recursiveInput = $('recursiveInput');
 const preserveFoldersInput = $('preserveFoldersInput');
@@ -22,6 +25,7 @@ const exiftoolStatus = $('exiftoolStatus');
 const configStatus = $('configStatus');
 const inputSummary = $('inputSummary');
 const outputSummary = $('outputSummary');
+const templateSummary = $('templateSummary');
 const progressText = $('progressText');
 const progressFill = $('progressFill');
 const logOutput = $('logOutput');
@@ -57,6 +61,17 @@ function updateOutputSummary() {
 
   outputSummary.textContent = state.outputDir;
   outputSummary.className = 'summary';
+}
+
+function updateTemplateSummary() {
+  if (!state.templateFile) {
+    templateSummary.textContent = 'No template JPEG selected. Converter will use PNG metadata only.';
+    templateSummary.className = 'summary muted';
+    return;
+  }
+
+  templateSummary.textContent = state.templateFile;
+  templateSummary.className = 'summary';
 }
 
 checkToolsBtn.addEventListener('click', async () => {
@@ -115,6 +130,21 @@ selectFolderBtn.addEventListener('click', async () => {
   }
 });
 
+selectTemplateBtn.addEventListener('click', async () => {
+  const result = await window.converterApi.selectTemplateJpeg();
+  if (!result.canceled) {
+    state.templateFile = result.file;
+    updateTemplateSummary();
+    log(`Template JPEG selected: ${state.templateFile}`);
+  }
+});
+
+clearTemplateBtn.addEventListener('click', () => {
+  state.templateFile = '';
+  updateTemplateSummary();
+  log('Template JPEG cleared. Converter will use PNG metadata only.');
+});
+
 selectOutputBtn.addEventListener('click', async () => {
   const result = await window.converterApi.selectOutputFolder();
   if (!result.canceled) {
@@ -151,8 +181,9 @@ convertBtn.addEventListener('click', async () => {
       files: state.files,
       sourceRoot: state.sourceRoot,
       outputDir: state.outputDir,
+      templateFile: state.templateFile,
       preserveFolders: preserveFoldersInput.checked,
-      quality: Number(qualityInput.value || 92),
+      quality: Number(qualityInput.value || 95),
       samplingFactor: samplingInput.value || '4:2:0',
       background: backgroundInput.value || 'white',
       verifyTags: verifyTagsInput.value || ''
