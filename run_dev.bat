@@ -1,5 +1,5 @@
 @echo off
-cd /d "%~dp0"
+echo Starting PNG to JPEG Metadata Converter v3...
 npm install
 npm start
 pause

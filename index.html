@@ -3,36 +3,37 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PNG to JPEG Metadata Converter v2</title>
+  <title>PNG to JPEG Metadata Converter v3</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="app-shell">
     <section class="hero">
       <div>
-        <p class="eyebrow">Offline QA Utility · v2</p>
+        <p class="eyebrow">Offline QA Utility · v3</p>
         <h1>PNG to JPEG Metadata Converter</h1>
-        <p class="subtitle">Convert PNG files to high-quality JPEGs, preserve custom project metadata, and generate a pass/fail verification report.</p>
+        <p class="subtitle">Convert PNG files to JPEGs, write project metadata as individual XMP tags, and generate a pass/fail verification report.</p>
       </div>
-      <div class="hero-badge">PNG → JPG</div>
+      <div class="hero-badge">PNG → JPG<br><span>XMP</span></div>
     </section>
 
     <section class="card notice-card">
-      <h2>What v2 does differently</h2>
-      <p>This version does not only rely on a basic metadata copy. It extracts your custom PNG fields and embeds them into the JPEG as JSON in multiple places: JPEG Comment, EXIF UserComment, XMP Description, and a sidecar JSON file.</p>
+      <h2>What v3 does differently</h2>
+      <p>This version targets the current JPEG metadata format. It writes the project fields as individual XMP tags, then verifies each field directly in the JPEG. It also keeps the JSON backup from v2 for safety.</p>
     </section>
 
     <section class="card">
       <div class="card-header">
         <div>
           <h2>1. Check required tools</h2>
-          <p>Uses ImageMagick for conversion and ExifTool for metadata extraction, embedding, and verification.</p>
+          <p>Uses ImageMagick for conversion and ExifTool for metadata extraction, XMP writing, and verification.</p>
         </div>
         <button id="checkToolsBtn" class="primary">Check Tools</button>
       </div>
       <div class="tool-grid">
         <div id="magickStatus" class="status-box neutral">ImageMagick: Not checked</div>
         <div id="exiftoolStatus" class="status-box neutral">ExifTool: Not checked</div>
+        <div id="configStatus" class="status-box neutral">ExifTool Config: Not checked</div>
       </div>
     </section>
 
@@ -60,7 +61,15 @@
       <div class="settings-grid">
         <label>
           JPEG Quality
-          <input id="qualityInput" type="number" min="1" max="100" value="95" />
+          <input id="qualityInput" type="number" min="1" max="100" value="92" />
+        </label>
+        <label>
+          Chroma sampling
+          <select id="samplingInput">
+            <option value="4:2:0" selected>4:2:0 — matches current JPEG sample</option>
+            <option value="4:4:4">4:4:4 — higher color fidelity</option>
+            <option value="4:2:2">4:2:2 — middle option</option>
+          </select>
         </label>
         <label>
           Transparency background
@@ -69,15 +78,15 @@
       </div>
       <label class="full-label">
         Required project metadata fields
-        <textarea id="verifyTagsInput" rows="5">Timestamp, Location-index, CameraType, Ptz, PtzParameters, RoomCoordinates, ImagingDevice, CameraTableLocation, BaselineHeight, Location</textarea>
+        <textarea id="verifyTagsInput" rows="5">Timestamp, Location-index, CameraType, ImagingDevice, CameraTableLocation, BaselineHeight, Ptz, PtzParameters, RoomCoordinates, Location</textarea>
       </label>
-      <p class="hint">These defaults match the fields found in your original PNG metadata. The CSV will show which fields were found in the PNG, preserved directly in the JPEG, or preserved inside the embedded JSON block.</p>
+      <p class="hint">These defaults match the current JPEG XMP metadata sample. The CSV will show which fields were written as individual XMP tags and whether any values are missing/mismatched.</p>
     </section>
 
     <section class="card action-card">
       <div>
         <h2>5. Convert and verify</h2>
-        <p>Creates JPEGs, copies standard metadata, embeds custom PNG metadata, then writes a CSV report and metadata dump files.</p>
+        <p>Creates JPEGs, writes individual XMP tags, preserves a JSON backup, and writes a CSV report plus metadata dumps.</p>
       </div>
       <button id="convertBtn" class="primary big">Start Conversion</button>
     </section>
