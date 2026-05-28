@@ -20,6 +20,7 @@ const qualityInput = $('qualityInput');
 const samplingInput = $('samplingInput');
 const backgroundInput = $('backgroundInput');
 const verifyTagsInput = $('verifyTagsInput');
+const embedJsonBackupInput = $('embedJsonBackupInput');
 const magickStatus = $('magickStatus');
 const exiftoolStatus = $('exiftoolStatus');
 const configStatus = $('configStatus');
@@ -186,7 +187,8 @@ convertBtn.addEventListener('click', async () => {
       quality: Number(qualityInput.value || 95),
       samplingFactor: samplingInput.value || '4:2:0',
       background: backgroundInput.value || 'white',
-      verifyTags: verifyTagsInput.value || ''
+      verifyTags: verifyTagsInput.value || '',
+      embedJsonBackup: embedJsonBackupInput.checked
     });
 
     progressText.textContent = `Done: ${result.successCount} clean, ${result.warningCount} warnings, ${result.failCount} failed`;

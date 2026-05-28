@@ -1,4 +1,4 @@
-PNG to JPEG Metadata Converter v4
+PNG to JPEG Metadata Converter v4.1
 =================================
 
 What this app does
@@ -12,11 +12,11 @@ What this app does
 7. Also stores the same custom metadata as a JSON backup in JPEG Comment, EXIF UserComment, XMP Description, and a sidecar JSON file.
 8. Generates a CSV report and full metadata dump files for every source/template/output set.
 
-Why v4 exists
+Why v4.1 exists
 -------------
 Your test goal is not only to preserve the fields the backend needs, but to emulate the metadata structure of a real current JPEG upload as closely as possible.
 
-v3 wrote the project fields as individual XMP tags. v4 adds template mode:
+v3 wrote the project fields as individual XMP tags. v4.1 adds template mode:
 
   Real JPEG template = camera/app metadata shell and defaults
   Original PNG       = image pixels and actual project-specific metadata
@@ -104,7 +104,7 @@ B) Put magick.exe and exiftool.exe in this app's tools folder before building.
 
 Suggested folder layout
 -----------------------
-PNG_to_JPEG_Metadata_App_v4/
+PNG_to_JPEG_Metadata_App_v4.1/
   assets/
     icon.ico
   tools/
@@ -173,3 +173,9 @@ The CSV should show:
 - Status = Converted and verified
 
 If PreservedInEmbeddedJsonBackup is populated but PreservedAsIndividualXmpTags is missing fields, the metadata was backed up but did not get written in the current JPEG XMP target format.
+
+
+v4.1 note:
+- Embedded JSON backup inside JPEG Comment/UserComment/ImageDescription/Description is OFF by default.
+- This makes output metadata closer to the real current JPEG sample.
+- A sidecar JSON file and metadata dump report are still always created.

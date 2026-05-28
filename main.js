@@ -3,7 +3,7 @@ const path = require('path');
 const fsp = require('fs/promises');
 const { spawn, spawnSync } = require('child_process');
 
-const APP_ID = 'com.valcruz.pngjpegmetadata.v4';
+const APP_ID = 'com.valcruz.pngjpegmetadata.v4_1';
 app.setAppUserModelId(APP_ID);
 
 const DEFAULT_PROJECT_TAGS = [
@@ -502,6 +502,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
   const quality = String(Number(options.quality || 95));
   const background = options.background || 'white';
   const samplingFactor = cleanSamplingFactor(options.samplingFactor || '4:2:0');
+  const embedJsonBackup = Boolean(options.embedJsonBackup);
   const requestedTags = requestedTagList(options.verifyTags || DEFAULT_PROJECT_TAGS.join(', '));
   const reportRows = [];
   const startedAt = new Date();
@@ -553,7 +554,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
       MissingFromJpegOverall: '',
       MismatchedFieldsOverall: '',
       XmpWriteStatus: '',
-      EmbeddedBackupLocations: 'JPEG Comment; EXIF UserComment; XMP Description; sidecar JSON',
+      EmbeddedBackupLocations: embedJsonBackup ? 'JPEG Comment; EXIF UserComment; EXIF ImageDescription; XMP Description; sidecar JSON' : 'Sidecar JSON only - embedded JPEG backup disabled for strict metadata emulation',
       Error: ''
     };
 
@@ -597,13 +598,13 @@ ipcMain.handle('start-conversion', async (event, options) => {
       const { projectMetadata, missingFromSource } = extractProjectMetadata(sourceMeta, requestedTags);
 
       const embeddedPayload = {
-        metadataSchema: 'png-to-jpeg-project-metadata-v4',
-        targetFormat: templateFile ? 'JPEG with template metadata shell and individual XMP-Sprout fields' : 'JPEG with individual XMP-Sprout fields',
+        metadataSchema: 'png-to-jpeg-project-metadata-v4.1',
+        targetFormat: templateFile ? 'JPEG with template metadata shell and individual XMP-Sprout fields; optional embedded JSON disabled by default' : 'JPEG with individual XMP-Sprout fields; optional embedded JSON disabled by default',
         sourceFileName: path.basename(sourceFile),
         outputFileName: path.basename(destinationFile),
         createdAt: new Date().toISOString(),
         templateFileName: templateFile ? path.basename(templateFile) : '',
-        note: templateFile ? 'v4: Metadata shell is copied from the real JPEG template, then PNG project fields overwrite matching XMP tags and are backed up as JSON.' : 'No template selected. Project fields are written as individual XMP tags and also backed up as JSON.',
+        note: templateFile ? 'v4.1: Metadata shell is copied from the real JPEG template, then PNG project fields overwrite matching XMP tags. Sidecar JSON is always created; embedded JPEG JSON backup is optional and disabled by default for stricter real-JPEG emulation.' : 'No template selected. Project fields are written as individual XMP tags. Sidecar JSON is always created; embedded JPEG JSON backup is optional and disabled by default.',
         projectMetadata
       };
 
@@ -618,15 +619,18 @@ ipcMain.handle('start-conversion', async (event, options) => {
         row.XmpWriteStatus = 'No project metadata found in source PNG to write';
       }
 
-      // Backup pass: keep the v2 JSON preservation too, but do not rely on it as the primary format.
-      await runCommand(resolvedExifTool, [
-        '-overwrite_original',
-        `-Comment=${embeddedJson}`,
-        `-UserComment=${embeddedJson}`,
-        `-ImageDescription=${embeddedJson}`,
-        `-XMP-dc:Description=${embeddedJson}`,
-        destinationFile
-      ]);
+      // Optional backup pass: disabled by default in v4.1 so output JPEGs more closely emulate real current JPEGs.
+      // The sidecar JSON is always created for QA traceability.
+      if (embedJsonBackup) {
+        await runCommand(resolvedExifTool, [
+          '-overwrite_original',
+          `-Comment=${embeddedJson}`,
+          `-UserComment=${embeddedJson}`,
+          `-ImageDescription=${embeddedJson}`,
+          `-XMP-dc:Description=${embeddedJson}`,
+          destinationFile
+        ]);
+      }
 
       const [sourceDims, jpegDims, jpegMeta] = await Promise.all([
         getDimensions(sourceFile),
@@ -703,7 +707,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
 
   const summaryPath = path.join(reportDir, 'summary.txt');
   await fsp.writeFile(summaryPath, [
-    'PNG to JPEG Metadata Converter v4 - Summary',
+    'PNG to JPEG Metadata Converter v4.1 - Summary',
     `Started: ${startedAt.toString()}`,
     `Finished: ${new Date().toString()}`,
     `Total PNG files: ${files.length}`,
@@ -715,13 +719,13 @@ ipcMain.handle('start-conversion', async (event, options) => {
     `Report CSV: ${reportPath}`,
     `Metadata dumps: ${dumpsDir}`,
     '',
-    'What v4 verifies:',
+    'What v4.1 verifies:',
     '1. JPEG dimensions match the source PNG.',
     '2. Standard metadata copy is attempted using ExifTool.',
     '3. If a template JPEG is selected, its EXIF/JFIF/XMP/ICC metadata shell is copied to the output JPEG first.',
     '4. Required custom PNG fields are extracted and written as individual XMP-Sprout tags, overwriting matching template project fields.',
-    '5. The same fields are also backed up as JSON in JPEG Comment, EXIF UserComment, XMP Description, and a sidecar JSON file.',
-    '6. The CSV reports PASS/WARNING details for template mode, individual XMP tags, and JSON backup preservation.',
+    '5. A sidecar JSON file is always created. Embedded JPEG JSON backup is optional and disabled by default for stricter real-JPEG emulation.',
+    '6. The CSV reports PASS/WARNING details for template mode, individual XMP tags, and optional JSON backup preservation.',
     '',
     'Target fields based on the current JPEG metadata sample:',
     DEFAULT_PROJECT_TAGS.map((tag) => `- ${tag}`).join('\n'),
