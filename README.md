@@ -1,103 +1,33 @@
-# PNG to JPEG Converter
+# PNG to JPEG
 
-A high-fidelity, fully-offline desktop app for converting PNG images to JPEG. Drag in your PNGs, tweak the quality, and export — no uploads, no cloud, no tracking. Built with React + Vite and packaged as a Windows desktop app with Electron.
+Local-first desktop converter for turning PNG images into JPEGs. Currently maintained as **two parallel iterations** living on separate branches.
 
-## Features
+> The default `main` branch intentionally contains no source code — pick an iteration below.
 
-- **Drag-and-drop** PNG → JPEG conversion in batch.
-- **100% local** — files never leave your machine.
-- **PNG metadata extraction** (DPI, EXIF where present) preserved/displayed during conversion.
-- **Adjustable JPEG quality** for size/quality trade-offs.
-- **One-click download** of converted images.
-- Clean, modern UI built with **React 18**, **Tailwind CSS v4**, and **lucide-react** icons.
+## Iterations
 
-## Tech stack
-
-| Layer | Tech |
+| Branch | Description |
 |---|---|
-| UI | React 18, Tailwind CSS v4, lucide-react |
-| Bundler / dev server | Vite 8 |
-| Desktop shell | Electron 41 |
-| Packaging | electron-builder 26 (NSIS installer for Windows) |
+| [`gemini-version`](https://github.com/ValentinnoCruz/PNG-to-JPEG/tree/gemini-version) | Original Electron + React + Vite implementation. Full PNG metadata pipeline (EXIF, XMP, `tEXt` / `zTXt` / `iTXt` chunks), custom app icon, packaged as a Windows installer via `electron-builder`. Tagged release: [`v1.0.1-gemini`](https://github.com/ValentinnoCruz/PNG-to-JPEG/releases/tag/v1.0.1-gemini). |
+| [`experimental`](https://github.com/ValentinnoCruz/PNG-to-JPEG/tree/experimental) | A fresh, alternative approach. Empty starting point — under active exploration. |
 
-## Requirements
+## Working with an iteration
 
-- **Node.js 20.19+** or **22.12+** (Vite 8 requirement — Node 22 LTS recommended).
-- **npm** (ships with Node).
-- **Windows 10/11** to produce a Windows installer with `npm run package:win`.
-
-## Getting started
+Clone and check out the branch you want to work on:
 
 ```powershell
 git clone https://github.com/ValentinnoCruz/PNG-to-JPEG.git
-cd PNG-to-JPEG/png-to-jpeg-app
-npm install
+cd PNG-to-JPEG
+
+# Original implementation
+git checkout gemini-version
+
+# Or the new experimental approach
+git checkout experimental
 ```
 
-### Run in the browser (dev mode)
+Each branch has its own README with build and run instructions.
 
-```powershell
-npm run dev
-```
+## Why two branches?
 
-Opens the Vite dev server with hot-module reloading.
-
-### Run as a desktop app (dev mode)
-
-Build the web assets, then launch Electron against them:
-
-```powershell
-npm run build
-npx electron .
-```
-
-### Build the Windows installer
-
-```powershell
-npm run package:win
-```
-
-Outputs to `release/`:
-
-- `PNG to JPEG Converter Setup 1.0.1.exe` — the NSIS installer.
-- `win-unpacked/PNG to JPEG Converter.exe` — the raw executable (run it directly without installing).
-
-## Project structure
-
-```
-png-to-jpeg-app/
-├── build/
-│   └── icon.ico          # App icon (multi-res, auto-discovered by electron-builder)
-├── public/               # Static assets served as-is by Vite
-├── src/
-│   ├── App.jsx           # Main React component (UI + conversion logic)
-│   ├── main.jsx          # React entry point
-│   ├── App.css / index.css
-│   └── assets/
-├── main.js               # Electron main-process entry (creates BrowserWindow)
-├── vite.config.js        # Vite config (base: './' for Electron file:// loads)
-├── package.json          # Scripts + electron-builder config
-└── README.md
-```
-
-## Scripts
-
-| Script | What it does |
-|---|---|
-| `npm run dev` | Start Vite dev server with HMR. |
-| `npm run build` | Build production web assets to `dist/`. |
-| `npm run preview` | Preview the production build locally. |
-| `npm run package:win` | Build web assets + produce Windows installer in `release/`. |
-
-## Releasing
-
-1. Bump `version` in `package.json` (e.g. `1.0.1` → `1.0.2`).
-2. `npm run package:win`.
-3. Test the installer from `release/`.
-4. Upload the `.exe` to a GitHub Release.
-
-> Keep `appId` (`com.valentinnocruz.pngconverter`) stable across releases — changing it makes Windows treat the new version as a separate app instead of an in-place upgrade.
-
-## License
-
-This project is private and not currently licensed for redistribution.
+The two iterations explore meaningfully different architectures and aren't intended to merge into a single codebase. Keeping them on independent branches preserves the history of each approach cleanly without one overwriting the other.
