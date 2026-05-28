@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PNG to JPEG Metadata Converter v4</title>
+  <title>PNG to JPEG Metadata Converter v4.1</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="app-shell">
     <section class="hero">
       <div>
-        <p class="eyebrow">Offline QA Utility · v4</p>
+        <p class="eyebrow">Offline QA Utility · v4.1</p>
         <h1>PNG to JPEG Metadata Converter</h1>
         <p class="subtitle">Convert PNG files to JPEGs, emulate a real JPEG metadata template, write project metadata as individual XMP tags, and generate a pass/fail verification report.</p>
       </div>
@@ -19,7 +19,7 @@
 
     <section class="card notice-card">
       <h2>What v4 does differently</h2>
-      <p>This version can use a real current JPEG as a metadata template. It copies the template metadata shell first, then overwrites the project-specific fields from the source PNG as individual XMP tags. It also keeps a JSON backup/report for QA traceability.</p>
+      <p>This version can use a real current JPEG as a metadata template. It copies the template metadata shell first, then overwrites the project-specific fields from the source PNG as individual XMP tags. It always creates a sidecar JSON report for QA traceability. Embedded JPEG backup JSON is optional and disabled by default so the output metadata looks closer to a real current JPEG.</p>
     </section>
 
     <section class="card">
@@ -86,17 +86,18 @@
           <input id="backgroundInput" type="text" value="white" />
         </label>
       </div>
+      <label class="check-label advanced-check"><input id="embedJsonBackupInput" type="checkbox" /> Embed JSON backup into JPEG metadata fields</label>
       <label class="full-label">
         Required project metadata fields
         <textarea id="verifyTagsInput" rows="5">Timestamp, Location-index, CameraType, ImagingDevice, CameraTableLocation, BaselineHeight, Ptz, PtzParameters, RoomCoordinates, Location</textarea>
       </label>
-      <p class="hint">Recommended starting point: JPEG Quality 95 and Chroma Sampling 4:2:0. These required fields match the current JPEG XMP metadata sample. The CSV will show which fields were written as individual XMP tags and whether any values are missing/mismatched.</p>
+      <p class="hint">Recommended starting point: JPEG Quality 95 and Chroma Sampling 4:2:0. Leave embedded JSON backup off for strict emulation. Turn it on only if you want extra backup metadata inside Comment/UserComment/Description fields.</p>
     </section>
 
     <section class="card action-card">
       <div>
         <h2>6. Convert and verify</h2>
-        <p>Creates JPEGs, optionally applies the real JPEG template metadata shell, writes PNG project fields as individual XMP tags, preserves a JSON backup, and writes a CSV report plus metadata dumps.</p>
+        <p>Creates JPEGs, optionally applies the real JPEG template metadata shell, writes PNG project fields as individual XMP tags, writes a sidecar JSON backup, and writes a CSV report plus metadata dumps. Embedded JSON inside the JPEG is optional.</p>
       </div>
       <button id="convertBtn" class="primary big">Start Conversion</button>
     </section>

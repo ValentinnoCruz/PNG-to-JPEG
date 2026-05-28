@@ -214,3 +214,7 @@ textarea { resize: vertical; min-height: 92px; }
   .hero, .card-header, .action-card, .progress-header { flex-direction: column; align-items: flex-start; }
   .tool-grid, .settings-grid { grid-template-columns: 1fr; }
 }
+
+.advanced-check {
+  margin-top: 14px;
+}

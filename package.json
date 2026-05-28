@@ -1,7 +1,7 @@
 {
   "name": "png-to-jpeg-metadata-converter",
-  "version": "4.0.0",
-  "description": "Offline PNG to JPEG converter that uses a real JPEG metadata template, writes project metadata as individual XMP tags, and generates verification reports.",
+  "version": "4.1.0",
+  "description": "Offline PNG to JPEG converter that uses a real JPEG metadata template, writes project metadata as individual XMP tags, and generates strict-emulation verification reports.",
   "main": "main.js",
   "author": "Val Cruz",
   "scripts": {
@@ -14,7 +14,7 @@
     "electron-builder": "^26.0.0"
   },
   "build": {
-    "appId": "com.valcruz.pngjpegmetadata.v4",
+    "appId": "com.valcruz.pngjpegmetadata.v4_1",
     "productName": "PNG to JPEG Metadata Converter",
     "directories": {
       "output": "dist"
