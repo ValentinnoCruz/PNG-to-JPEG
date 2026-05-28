@@ -3,23 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PNG to JPEG Metadata Converter v3</title>
+  <title>PNG to JPEG Metadata Converter v4</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="app-shell">
     <section class="hero">
       <div>
-        <p class="eyebrow">Offline QA Utility · v3</p>
+        <p class="eyebrow">Offline QA Utility · v4</p>
         <h1>PNG to JPEG Metadata Converter</h1>
-        <p class="subtitle">Convert PNG files to JPEGs, write project metadata as individual XMP tags, and generate a pass/fail verification report.</p>
+        <p class="subtitle">Convert PNG files to JPEGs, emulate a real JPEG metadata template, write project metadata as individual XMP tags, and generate a pass/fail verification report.</p>
       </div>
-      <div class="hero-badge">PNG → JPG<br><span>XMP</span></div>
+      <div class="hero-badge">PNG → JPG<br><span>TEMPLATE + XMP</span></div>
     </section>
 
     <section class="card notice-card">
-      <h2>What v3 does differently</h2>
-      <p>This version targets the current JPEG metadata format. It writes the project fields as individual XMP tags, then verifies each field directly in the JPEG. It also keeps the JSON backup from v2 for safety.</p>
+      <h2>What v4 does differently</h2>
+      <p>This version can use a real current JPEG as a metadata template. It copies the template metadata shell first, then overwrites the project-specific fields from the source PNG as individual XMP tags. It also keeps a JSON backup/report for QA traceability.</p>
     </section>
 
     <section class="card">
@@ -49,7 +49,17 @@
     </section>
 
     <section class="card">
-      <h2>3. Select output</h2>
+      <h2>3. Select real JPEG metadata template</h2>
+      <p class="subtitle">Optional but recommended for accurate test emulation. The converter copies the template JPEG's EXIF/JFIF/XMP/ICC metadata shell, then overwrites project fields with values from each PNG.</p>
+      <div class="button-row">
+        <button id="selectTemplateBtn">Select Template JPEG</button>
+        <button id="clearTemplateBtn">Clear Template</button>
+      </div>
+      <div id="templateSummary" class="summary muted">No template JPEG selected. Converter will use PNG metadata only.</div>
+    </section>
+
+    <section class="card">
+      <h2>4. Select output</h2>
       <div class="button-row">
         <button id="selectOutputBtn">Select Output Folder</button>
       </div>
@@ -57,11 +67,11 @@
     </section>
 
     <section class="card settings-card">
-      <h2>4. Conversion and verification settings</h2>
+      <h2>5. Conversion and verification settings</h2>
       <div class="settings-grid">
         <label>
           JPEG Quality
-          <input id="qualityInput" type="number" min="1" max="100" value="92" />
+          <input id="qualityInput" type="number" min="1" max="100" value="95" />
         </label>
         <label>
           Chroma sampling
@@ -80,13 +90,13 @@
         Required project metadata fields
         <textarea id="verifyTagsInput" rows="5">Timestamp, Location-index, CameraType, ImagingDevice, CameraTableLocation, BaselineHeight, Ptz, PtzParameters, RoomCoordinates, Location</textarea>
       </label>
-      <p class="hint">These defaults match the current JPEG XMP metadata sample. The CSV will show which fields were written as individual XMP tags and whether any values are missing/mismatched.</p>
+      <p class="hint">Recommended starting point: JPEG Quality 95 and Chroma Sampling 4:2:0. These required fields match the current JPEG XMP metadata sample. The CSV will show which fields were written as individual XMP tags and whether any values are missing/mismatched.</p>
     </section>
 
     <section class="card action-card">
       <div>
-        <h2>5. Convert and verify</h2>
-        <p>Creates JPEGs, writes individual XMP tags, preserves a JSON backup, and writes a CSV report plus metadata dumps.</p>
+        <h2>6. Convert and verify</h2>
+        <p>Creates JPEGs, optionally applies the real JPEG template metadata shell, writes PNG project fields as individual XMP tags, preserves a JSON backup, and writes a CSV report plus metadata dumps.</p>
       </div>
       <button id="convertBtn" class="primary big">Start Conversion</button>
     </section>

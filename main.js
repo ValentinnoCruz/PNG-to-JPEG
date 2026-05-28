@@ -3,7 +3,7 @@ const path = require('path');
 const fsp = require('fs/promises');
 const { spawn, spawnSync } = require('child_process');
 
-const APP_ID = 'com.valcruz.pngjpegmetadata.v3';
+const APP_ID = 'com.valcruz.pngjpegmetadata.v4';
 app.setAppUserModelId(APP_ID);
 
 const DEFAULT_PROJECT_TAGS = [
@@ -161,6 +161,11 @@ function runCommand(command, args, options = {}) {
 
 function isPng(filePath) {
   return filePath.toLowerCase().endsWith('.png');
+}
+
+function isJpeg(filePath) {
+  const lower = filePath.toLowerCase();
+  return lower.endsWith('.jpg') || lower.endsWith('.jpeg');
 }
 
 async function walkForPngs(folderPath, recursive = true) {
@@ -435,6 +440,22 @@ ipcMain.handle('select-png-folder', async (_, recursive) => {
   return { canceled: false, files, sourceRoot };
 });
 
+ipcMain.handle('select-template-jpeg', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select real JPEG metadata template',
+    properties: ['openFile'],
+    filters: [
+      { name: 'JPEG Images', extensions: ['jpg', 'jpeg'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  });
+
+  if (result.canceled || !result.filePaths.length) return { canceled: true, file: '' };
+  const selected = result.filePaths[0];
+  if (!isJpeg(selected)) return { canceled: true, file: '' };
+  return { canceled: false, file: selected };
+});
+
 ipcMain.handle('select-output-folder', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     title: 'Select output folder',
@@ -460,14 +481,25 @@ ipcMain.handle('start-conversion', async (event, options) => {
   const configPath = await getExifToolConfigPath();
 
   if (!configPath) {
-    throw new Error('Missing exiftool_config. This file is required in v3 to write the custom Sprout XMP fields individually.');
+    throw new Error('Missing exiftool_config. This file is required in v4 to write the custom Sprout XMP fields individually.');
   }
 
   const files = Array.isArray(options.files) ? options.files.filter(isPng) : [];
   if (!files.length) throw new Error('No PNG files selected.');
   if (!options.outputDir) throw new Error('No output folder selected.');
 
-  const quality = String(Number(options.quality || 92));
+  const templateFile = options.templateFile && isJpeg(options.templateFile) ? options.templateFile : '';
+  let templateMeta = null;
+  if (templateFile) {
+    try {
+      await fsp.access(templateFile);
+      templateMeta = await getMetadataJson(templateFile);
+    } catch (error) {
+      throw new Error(`Template JPEG could not be read: ${error.message}`);
+    }
+  }
+
+  const quality = String(Number(options.quality || 95));
   const background = options.background || 'white';
   const samplingFactor = cleanSamplingFactor(options.samplingFactor || '4:2:0');
   const requestedTags = requestedTagList(options.verifyTags || DEFAULT_PROJECT_TAGS.join(', '));
@@ -506,7 +538,12 @@ ipcMain.handle('start-conversion', async (event, options) => {
       JpegWidth: '',
       JpegHeight: '',
       DimensionsMatch: '',
-      JpegSamplingFactor: samplingFactor,
+      RequestedJpegQuality: quality,
+      RequestedChromaSampling: samplingFactor,
+      TemplateMode: templateFile ? 'Yes' : 'No',
+      TemplateFile: templateFile,
+      TemplateCopied: '',
+      ActualJpegSubSampling: '',
       RequiredTagsChecked: '',
       MissingFromSourcePNG: '',
       PreservedAsIndividualXmpTags: '',
@@ -533,25 +570,40 @@ ipcMain.handle('start-conversion', async (event, options) => {
         destinationFile
       ]);
 
-      // Broad copy first: preserves standard EXIF/XMP/ICC when ExifTool can map it safely.
-      await runCommand(resolvedExifTool, [
-        '-overwrite_original',
-        '-TagsFromFile', sourceFile,
-        '-all:all',
-        '-icc_profile',
-        destinationFile
-      ]);
+      if (templateFile) {
+        // v4 template emulation: copy the real JPEG metadata shell first.
+        // PNG-specific project fields are written afterward and overwrite matching template XMP fields.
+        await runCommand(resolvedExifTool, [
+          '-overwrite_original',
+          '-TagsFromFile', templateFile,
+          '-all:all',
+          '-icc_profile',
+          destinationFile
+        ]);
+        row.TemplateCopied = 'Yes - real JPEG template metadata copied before PNG project-field overwrite';
+      } else {
+        // No-template fallback: preserve whatever standard metadata ExifTool can safely map from the PNG.
+        await runCommand(resolvedExifTool, [
+          '-overwrite_original',
+          '-TagsFromFile', sourceFile,
+          '-all:all',
+          '-icc_profile',
+          destinationFile
+        ]);
+        row.TemplateCopied = 'No template selected - copied source PNG metadata only';
+      }
 
       const sourceMeta = await getMetadataJson(sourceFile);
       const { projectMetadata, missingFromSource } = extractProjectMetadata(sourceMeta, requestedTags);
 
       const embeddedPayload = {
-        metadataSchema: 'png-to-jpeg-project-metadata-v3',
-        targetFormat: 'JPEG with individual XMP-Sprout fields',
+        metadataSchema: 'png-to-jpeg-project-metadata-v4',
+        targetFormat: templateFile ? 'JPEG with template metadata shell and individual XMP-Sprout fields' : 'JPEG with individual XMP-Sprout fields',
         sourceFileName: path.basename(sourceFile),
         outputFileName: path.basename(destinationFile),
         createdAt: new Date().toISOString(),
-        note: 'Project fields are written as individual XMP tags and also backed up as JSON.',
+        templateFileName: templateFile ? path.basename(templateFile) : '',
+        note: templateFile ? 'v4: Metadata shell is copied from the real JPEG template, then PNG project fields overwrite matching XMP tags and are backed up as JSON.' : 'No template selected. Project fields are written as individual XMP tags and also backed up as JSON.',
         projectMetadata
       };
 
@@ -587,6 +639,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
       row.JpegWidth = jpegDims.width;
       row.JpegHeight = jpegDims.height;
       row.DimensionsMatch = sourceDims.width === jpegDims.width && sourceDims.height === jpegDims.height ? 'Yes' : 'No';
+      row.ActualJpegSubSampling = normalizeMetadataValue(jpegMeta.YCbCrSubSampling);
       row.MissingFromSourcePNG = missingFromSource.join('; ');
 
       const exactXmp = compareExactXmpTags(sourceMeta, jpegMeta, requestedTags);
@@ -605,6 +658,9 @@ ipcMain.handle('start-conversion', async (event, options) => {
       const safeBase = path.basename(sourceFile, path.extname(sourceFile)).replace(/[^a-z0-9_-]/gi, '_');
       const unique = `${String(i + 1).padStart(4, '0')}_${safeBase}`;
       await fsp.writeFile(path.join(dumpsDir, `${unique}_source_png_metadata.txt`), await getMetadataText(sourceFile), 'utf8');
+      if (templateFile) {
+        await fsp.writeFile(path.join(dumpsDir, `${unique}_template_jpg_metadata.txt`), await getMetadataText(templateFile), 'utf8');
+      }
       await fsp.writeFile(path.join(dumpsDir, `${unique}_output_jpg_metadata.txt`), await getMetadataText(destinationFile), 'utf8');
       await fsp.writeFile(path.join(dumpsDir, `${unique}_output_jpg_metadata_G1.txt`), await getMetadataTextWithFamily1(destinationFile), 'utf8');
       await fsp.writeFile(path.join(dumpsDir, `${unique}_embedded_metadata.json`), JSON.stringify(embeddedPayload, null, 2), 'utf8');
@@ -647,7 +703,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
 
   const summaryPath = path.join(reportDir, 'summary.txt');
   await fsp.writeFile(summaryPath, [
-    'PNG to JPEG Metadata Converter v3 - Summary',
+    'PNG to JPEG Metadata Converter v4 - Summary',
     `Started: ${startedAt.toString()}`,
     `Finished: ${new Date().toString()}`,
     `Total PNG files: ${files.length}`,
@@ -659,12 +715,13 @@ ipcMain.handle('start-conversion', async (event, options) => {
     `Report CSV: ${reportPath}`,
     `Metadata dumps: ${dumpsDir}`,
     '',
-    'What v3 verifies:',
+    'What v4 verifies:',
     '1. JPEG dimensions match the source PNG.',
     '2. Standard metadata copy is attempted using ExifTool.',
-    '3. Required custom PNG fields are extracted and written as individual XMP-Sprout tags.',
-    '4. The same fields are also backed up as JSON in JPEG Comment, EXIF UserComment, XMP Description, and a sidecar JSON file.',
-    '5. The CSV reports PASS/WARNING details for individual XMP tags and JSON backup preservation.',
+    '3. If a template JPEG is selected, its EXIF/JFIF/XMP/ICC metadata shell is copied to the output JPEG first.',
+    '4. Required custom PNG fields are extracted and written as individual XMP-Sprout tags, overwriting matching template project fields.',
+    '5. The same fields are also backed up as JSON in JPEG Comment, EXIF UserComment, XMP Description, and a sidecar JSON file.',
+    '6. The CSV reports PASS/WARNING details for template mode, individual XMP tags, and JSON backup preservation.',
     '',
     'Target fields based on the current JPEG metadata sample:',
     DEFAULT_PROJECT_TAGS.map((tag) => `- ${tag}`).join('\n'),

@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('converterApi', {
   checkDependencies: () => ipcRenderer.invoke('check-dependencies'),
   selectPngFiles: () => ipcRenderer.invoke('select-png-files'),
   selectPngFolder: (recursive) => ipcRenderer.invoke('select-png-folder', recursive),
+  selectTemplateJpeg: () => ipcRenderer.invoke('select-template-jpeg'),
   selectOutputFolder: () => ipcRenderer.invoke('select-output-folder'),
   startConversion: (options) => ipcRenderer.invoke('start-conversion', options),
   onProgress: (callback) => {
