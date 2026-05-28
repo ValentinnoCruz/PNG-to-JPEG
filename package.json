@@ -1,7 +1,7 @@
 {
   "name": "png-to-jpeg-app",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "main.js", 
   "scripts": {
     "dev": "vite",
@@ -10,8 +10,8 @@
     "package:win": "vite build && electron-builder --win"
   },
   "build": {
-    "appId": "com.valentinno.pngconverter",
-    "productName": "High-Fidelity Converter",
+    "appId": "com.valentinnocruz.pngconverter",
+    "productName": "PNG to JPEG Converter",
     "directories": {
       "output": "release"
     },
