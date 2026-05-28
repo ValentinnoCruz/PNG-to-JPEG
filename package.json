@@ -1,0 +1,52 @@
+{
+  "name": "png-to-jpeg-metadata-converter",
+  "version": "1.0.0",
+  "description": "Offline PNG to JPEG converter with metadata copy and verification report.",
+  "main": "main.js",
+  "author": "Val Cruz",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis",
+    "pack": "electron-builder --dir"
+  },
+  "devDependencies": {
+    "electron": "^41.7.1",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.valcruz.pngjpegmetadata",
+    "productName": "PNG to JPEG Metadata Converter",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "renderer.js",
+      "styles.css",
+      "assets/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "tools",
+        "to": "tools",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PNG to JPEG Metadata Converter"
+    }
+  }
+}

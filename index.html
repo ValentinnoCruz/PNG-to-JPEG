@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PNG to JPEG Metadata Converter</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Offline QA Utility</p>
+        <h1>PNG to JPEG Metadata Converter</h1>
+        <p class="subtitle">Convert PNG files to high-quality JPEGs, copy metadata, and generate a verification report.</p>
+      </div>
+      <div class="hero-badge">PNG → JPG</div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <h2>1. Check required tools</h2>
+          <p>Uses ImageMagick for conversion and ExifTool for metadata copy/verification.</p>
+        </div>
+        <button id="checkToolsBtn" class="primary">Check Tools</button>
+      </div>
+      <div class="tool-grid">
+        <div id="magickStatus" class="status-box neutral">ImageMagick: Not checked</div>
+        <div id="exiftoolStatus" class="status-box neutral">ExifTool: Not checked</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>2. Select PNG input</h2>
+      <div class="button-row">
+        <button id="selectFilesBtn">Select PNG Files</button>
+        <button id="selectFolderBtn">Select PNG Folder</button>
+        <label class="check-label"><input id="recursiveInput" type="checkbox" checked /> Include subfolders</label>
+        <label class="check-label"><input id="preserveFoldersInput" type="checkbox" checked /> Preserve folder structure</label>
+      </div>
+      <div id="inputSummary" class="summary muted">No PNG files selected.</div>
+    </section>
+
+    <section class="card">
+      <h2>3. Select output</h2>
+      <div class="button-row">
+        <button id="selectOutputBtn">Select Output Folder</button>
+      </div>
+      <div id="outputSummary" class="summary muted">No output folder selected.</div>
+    </section>
+
+    <section class="card settings-card">
+      <h2>4. Conversion settings</h2>
+      <div class="settings-grid">
+        <label>
+          JPEG Quality
+          <input id="qualityInput" type="number" min="1" max="100" value="95" />
+        </label>
+        <label>
+          Transparency background
+          <input id="backgroundInput" type="text" value="white" />
+        </label>
+      </div>
+      <label class="full-label">
+        Metadata tags to verify after copy
+        <textarea id="verifyTagsInput" rows="4">ImageWidth, ImageHeight, XResolution, YResolution, DateTimeOriginal, CreateDate, ModifyDate, GPSLatitude, GPSLongitude, ColorSpace, ICC_Profile, Zone, Table, Tray, Location</textarea>
+      </label>
+      <p class="hint">The app exports full metadata dumps for every source PNG and output JPG. The CSV compares dimensions plus the specific tags listed above.</p>
+    </section>
+
+    <section class="card action-card">
+      <div>
+        <h2>5. Convert and verify</h2>
+        <p>Creates JPEGs, copies metadata, then writes a report CSV and metadata dump files.</p>
+      </div>
+      <button id="convertBtn" class="primary big">Start Conversion</button>
+    </section>
+
+    <section class="card progress-card">
+      <div class="progress-header">
+        <h2>Progress</h2>
+        <div id="progressText" class="muted">Idle</div>
+      </div>
+      <div class="progress-bar"><div id="progressFill"></div></div>
+      <pre id="logOutput" class="log"></pre>
+    </section>
+  </main>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

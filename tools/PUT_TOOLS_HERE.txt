@@ -1,0 +1,4 @@
+Optional:
+Place magick.exe and exiftool.exe in this folder if you want the packaged app to find them without relying on Windows PATH.
+
+If you install ImageMagick and ExifTool system-wide and add them to PATH, you do not need to put anything here.
