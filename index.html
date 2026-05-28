@@ -3,112 +3,196 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PNG to JPEG Metadata Converter v4.1</title>
+  <title>PNG to JPEG Metadata Converter v4.2</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="app-shell">
     <section class="hero">
       <div>
-        <p class="eyebrow">Offline QA Utility · v4.1</p>
-        <h1>PNG to JPEG Metadata Converter</h1>
-        <p class="subtitle">Convert PNG files to JPEGs, emulate a real JPEG metadata template, write project metadata as individual XMP tags, and generate a pass/fail verification report.</p>
+        <p class="eyebrow">Offline QA Utility · v4.2</p>
+        <h1>PNG to JPEG Metadata Utility</h1>
+        <p class="subtitle">Convert PNGs into JPEGs that emulate the current real metadata structure, or view/edit project metadata in bulk.</p>
       </div>
-      <div class="hero-badge">PNG → JPG<br><span>TEMPLATE + XMP</span></div>
+      <div class="hero-badge">PNG → JPG<br><span>VIEW + EDIT XMP</span></div>
     </section>
 
-    <section class="card notice-card">
-      <h2>What v4 does differently</h2>
-      <p>This version can use a real current JPEG as a metadata template. It copies the template metadata shell first, then overwrites the project-specific fields from the source PNG as individual XMP tags. It always creates a sidecar JSON report for QA traceability. Embedded JPEG backup JSON is optional and disabled by default so the output metadata looks closer to a real current JPEG.</p>
+    <section class="tab-bar">
+      <button id="convertTabBtn" class="tab-button active">PNG → JPEG Converter</button>
+      <button id="editorTabBtn" class="tab-button">Metadata Viewer / Bulk Editor</button>
     </section>
 
-    <section class="card">
-      <div class="card-header">
-        <div>
-          <h2>1. Check required tools</h2>
-          <p>Uses ImageMagick for conversion and ExifTool for metadata extraction, XMP writing, and verification.</p>
+    <section id="convertTab" class="tab-panel active">
+      <section class="card notice-card">
+        <h2>Converter mode</h2>
+        <p>v4.2 uses a real JPEG as the metadata template, overwrites project fields with values from the PNG, and syncs EXIF date fields from the PNG/project timestamp by default so the dates do not conflict.</p>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2>1. Check required tools</h2>
+            <p>Uses ImageMagick for conversion and ExifTool for metadata extraction, XMP writing, and verification.</p>
+          </div>
+          <button id="checkToolsBtn" class="primary">Check Tools</button>
         </div>
-        <button id="checkToolsBtn" class="primary">Check Tools</button>
-      </div>
-      <div class="tool-grid">
-        <div id="magickStatus" class="status-box neutral">ImageMagick: Not checked</div>
-        <div id="exiftoolStatus" class="status-box neutral">ExifTool: Not checked</div>
-        <div id="configStatus" class="status-box neutral">ExifTool Config: Not checked</div>
-      </div>
-    </section>
+        <div class="tool-grid">
+          <div id="magickStatus" class="status-box neutral">ImageMagick: Not checked</div>
+          <div id="exiftoolStatus" class="status-box neutral">ExifTool: Not checked</div>
+          <div id="configStatus" class="status-box neutral">ExifTool Config: Not checked</div>
+        </div>
+      </section>
 
-    <section class="card">
-      <h2>2. Select PNG input</h2>
-      <div class="button-row">
-        <button id="selectFilesBtn">Select PNG Files</button>
-        <button id="selectFolderBtn">Select PNG Folder</button>
-        <label class="check-label"><input id="recursiveInput" type="checkbox" checked /> Include subfolders</label>
-        <label class="check-label"><input id="preserveFoldersInput" type="checkbox" checked /> Preserve folder structure</label>
-      </div>
-      <div id="inputSummary" class="summary muted">No PNG files selected.</div>
-    </section>
+      <section class="card">
+        <h2>2. Select PNG input</h2>
+        <div class="button-row">
+          <button id="selectFilesBtn">Select PNG Files</button>
+          <button id="selectFolderBtn">Select PNG Folder</button>
+          <label class="check-label"><input id="recursiveInput" type="checkbox" checked /> Include subfolders</label>
+          <label class="check-label"><input id="preserveFoldersInput" type="checkbox" checked /> Preserve folder structure</label>
+        </div>
+        <div id="inputSummary" class="summary muted">No PNG files selected.</div>
+      </section>
 
-    <section class="card">
-      <h2>3. Select real JPEG metadata template</h2>
-      <p class="subtitle">Optional but recommended for accurate test emulation. The converter copies the template JPEG's EXIF/JFIF/XMP/ICC metadata shell, then overwrites project fields with values from each PNG.</p>
-      <div class="button-row">
-        <button id="selectTemplateBtn">Select Template JPEG</button>
-        <button id="clearTemplateBtn">Clear Template</button>
-      </div>
-      <div id="templateSummary" class="summary muted">No template JPEG selected. Converter will use PNG metadata only.</div>
-    </section>
+      <section class="card">
+        <h2>3. Select real JPEG metadata template</h2>
+        <p class="subtitle">Recommended for accurate test emulation. The template supplies the EXIF/JFIF/XMP/ICC metadata shell. PNG project fields overwrite matching fields afterward.</p>
+        <div class="button-row">
+          <button id="selectTemplateBtn">Select Template JPEG</button>
+          <button id="clearTemplateBtn">Clear Template</button>
+        </div>
+        <div id="templateSummary" class="summary muted">No template JPEG selected. Converter will use PNG metadata only.</div>
+      </section>
 
-    <section class="card">
-      <h2>4. Select output</h2>
-      <div class="button-row">
-        <button id="selectOutputBtn">Select Output Folder</button>
-      </div>
-      <div id="outputSummary" class="summary muted">No output folder selected.</div>
-    </section>
+      <section class="card">
+        <h2>4. Select output</h2>
+        <div class="button-row">
+          <button id="selectOutputBtn">Select Output Folder</button>
+        </div>
+        <div id="outputSummary" class="summary muted">No output folder selected.</div>
+      </section>
 
-    <section class="card settings-card">
-      <h2>5. Conversion and verification settings</h2>
-      <div class="settings-grid">
-        <label>
-          JPEG Quality
-          <input id="qualityInput" type="number" min="1" max="100" value="95" />
+      <section class="card settings-card">
+        <h2>5. Conversion and verification settings</h2>
+        <div class="settings-grid">
+          <label>
+            JPEG Quality
+            <input id="qualityInput" type="number" min="1" max="100" value="95" />
+          </label>
+          <label>
+            Chroma sampling
+            <select id="samplingInput">
+              <option value="4:2:0" selected>4:2:0 — matches current JPEG sample</option>
+              <option value="4:4:4">4:4:4 — higher color fidelity</option>
+              <option value="4:2:2">4:2:2 — middle option</option>
+            </select>
+          </label>
+          <label>
+            Transparency background
+            <input id="backgroundInput" type="text" value="white" />
+          </label>
+        </div>
+        <label class="check-label advanced-check"><input id="syncExifDatesInput" type="checkbox" checked /> Sync EXIF date fields from PNG/project Timestamp</label>
+        <label class="check-label advanced-check"><input id="embedJsonBackupInput" type="checkbox" /> Embed JSON backup into JPEG metadata fields</label>
+        <label class="full-label">
+          Required project metadata fields
+          <textarea id="verifyTagsInput" rows="5">Timestamp, Location-index, CameraType, ImagingDevice, CameraTableLocation, BaselineHeight, Ptz, PtzParameters, RoomCoordinates, Location</textarea>
         </label>
-        <label>
-          Chroma sampling
-          <select id="samplingInput">
-            <option value="4:2:0" selected>4:2:0 — matches current JPEG sample</option>
-            <option value="4:4:4">4:4:4 — higher color fidelity</option>
-            <option value="4:2:2">4:2:2 — middle option</option>
-          </select>
-        </label>
-        <label>
-          Transparency background
-          <input id="backgroundInput" type="text" value="white" />
-        </label>
-      </div>
-      <label class="check-label advanced-check"><input id="embedJsonBackupInput" type="checkbox" /> Embed JSON backup into JPEG metadata fields</label>
-      <label class="full-label">
-        Required project metadata fields
-        <textarea id="verifyTagsInput" rows="5">Timestamp, Location-index, CameraType, ImagingDevice, CameraTableLocation, BaselineHeight, Ptz, PtzParameters, RoomCoordinates, Location</textarea>
-      </label>
-      <p class="hint">Recommended starting point: JPEG Quality 95 and Chroma Sampling 4:2:0. Leave embedded JSON backup off for strict emulation. Turn it on only if you want extra backup metadata inside Comment/UserComment/Description fields.</p>
+        <p class="hint">Recommended: Quality 95, Chroma Sampling 4:2:0, Sync EXIF dates on, embedded JSON backup off.</p>
+      </section>
+
+      <section class="card action-card">
+        <div>
+          <h2>6. Convert and verify</h2>
+          <p>Creates JPEGs, applies the real JPEG template shell, writes PNG project fields as individual XMP tags, syncs date fields, and creates CSV/metadata reports.</p>
+        </div>
+        <button id="convertBtn" class="primary big">Start Conversion</button>
+      </section>
+
+      <section class="card progress-card">
+        <div class="progress-header">
+          <h2>Progress</h2>
+          <div id="progressText" class="muted">Idle</div>
+        </div>
+        <div class="progress-bar"><div id="progressFill"></div></div>
+        <pre id="logOutput" class="log"></pre>
+      </section>
     </section>
 
-    <section class="card action-card">
-      <div>
-        <h2>6. Convert and verify</h2>
-        <p>Creates JPEGs, optionally applies the real JPEG template metadata shell, writes PNG project fields as individual XMP tags, writes a sidecar JSON backup, and writes a CSV report plus metadata dumps. Embedded JSON inside the JPEG is optional.</p>
-      </div>
-      <button id="convertBtn" class="primary big">Start Conversion</button>
-    </section>
+    <section id="editorTab" class="tab-panel">
+      <section class="card notice-card">
+        <h2>Metadata Viewer / Bulk Editor</h2>
+        <p>View the project metadata fields from JPEG/PNG images. Edit one image, or apply filled-in fields to all loaded images. Edits are written as individual XMP-Sprout tags, matching the current JPEG workflow.</p>
+      </section>
 
-    <section class="card progress-card">
-      <div class="progress-header">
-        <h2>Progress</h2>
-        <div id="progressText" class="muted">Idle</div>
-      </div>
-      <div class="progress-bar"><div id="progressFill"></div></div>
-      <pre id="logOutput" class="log"></pre>
+      <section class="card">
+        <h2>1. Load images</h2>
+        <div class="button-row">
+          <button id="selectEditorFilesBtn">Select Images</button>
+          <button id="selectEditorFolderBtn">Select Image Folder</button>
+          <button id="refreshMetadataBtn">Refresh Metadata</button>
+          <label class="check-label"><input id="editorRecursiveInput" type="checkbox" checked /> Include subfolders</label>
+        </div>
+        <div id="editorSummary" class="summary muted">No images loaded.</div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2>2. Metadata table</h2>
+            <p>Click a row to load that image's values into the editor form.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="metadata-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>File</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Timestamp</th>
+                <th>Location</th>
+                <th>CameraTableLocation</th>
+                <th>ImagingDevice</th>
+                <th>BaselineHeight</th>
+              </tr>
+            </thead>
+            <tbody id="metadataTableBody">
+              <tr><td colspan="9" class="muted">No metadata loaded.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card settings-card">
+        <h2>3. Edit project metadata</h2>
+        <p class="hint">For bulk edits, fill only the fields you want to change, then use “Apply filled fields to all loaded images.”</p>
+        <div class="settings-grid editor-grid">
+          <label>Timestamp <input id="editTimestamp" type="text" placeholder="2025-02-28T11:16:11.072-0500" /></label>
+          <label>Location-index <input id="editLocationIndex" type="text" /></label>
+          <label>CameraType <input id="editCameraType" type="text" /></label>
+          <label>ImagingDevice <input id="editImagingDevice" type="text" /></label>
+          <label>CameraTableLocation <input id="editCameraTableLocation" type="text" /></label>
+          <label>BaselineHeight <input id="editBaselineHeight" type="text" /></label>
+          <label>Location <input id="editLocation" type="text" /></label>
+        </div>
+        <label class="full-label">Ptz <textarea id="editPtz" rows="3" placeholder='{"pan":65.06,"tilt":-24.94,"zoom":9869}'></textarea></label>
+        <label class="full-label">PtzParameters <textarea id="editPtzParameters" rows="3"></textarea></label>
+        <label class="full-label">RoomCoordinates <textarea id="editRoomCoordinates" rows="3" placeholder='{"x":387,"y":262}'></textarea></label>
+        <label class="check-label advanced-check"><input id="editorSyncExifDatesInput" type="checkbox" checked /> If Timestamp is edited, sync EXIF date fields too</label>
+        <div class="button-row">
+          <button id="clearEditFormBtn">Clear Form</button>
+          <button id="applySelectedBtn" class="primary">Apply filled fields to selected image</button>
+          <button id="applyAllBtn" class="primary">Apply filled fields to all loaded images</button>
+        </div>
+        <div id="editorStatus" class="summary muted">No selected image.</div>
+      </section>
+
+      <section class="card progress-card">
+        <h2>Editor Log</h2>
+        <pre id="editorLogOutput" class="log"></pre>
+      </section>
     </section>
   </main>
 

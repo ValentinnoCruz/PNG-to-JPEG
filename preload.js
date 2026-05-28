@@ -7,6 +7,12 @@ contextBridge.exposeInMainWorld('converterApi', {
   selectTemplateJpeg: () => ipcRenderer.invoke('select-template-jpeg'),
   selectOutputFolder: () => ipcRenderer.invoke('select-output-folder'),
   startConversion: (options) => ipcRenderer.invoke('start-conversion', options),
+
+  selectImageFiles: () => ipcRenderer.invoke('select-image-files'),
+  selectImageFolder: (recursive) => ipcRenderer.invoke('select-image-folder', recursive),
+  readImageMetadata: (files) => ipcRenderer.invoke('read-image-metadata', files),
+  applyMetadataEdits: (payload) => ipcRenderer.invoke('apply-metadata-edits', payload),
+
   onProgress: (callback) => {
     const listener = (_, payload) => callback(payload);
     ipcRenderer.on('convert-progress', listener);
