@@ -1,0 +1,31 @@
+# ExifTool custom XMP configuration for the PNG to JPEG Metadata Converter v3.
+# This defines the project fields found in the current Sprout/AIP JPEG metadata sample
+# so ExifTool can write them as individual XMP tags on converted JPEG files.
+
+%Image::ExifTool::UserDefined = (
+    'Image::ExifTool::XMP::Main' => {
+        Sprout => {
+            SubDirectory => {
+                TagTable => 'Image::ExifTool::UserDefined::Sprout',
+            },
+        },
+    },
+);
+
+%Image::ExifTool::UserDefined::Sprout = (
+    GROUPS => { 0 => 'XMP', 1 => 'XMP-Sprout', 2 => 'Image' },
+    NAMESPACE => { 'Sprout' => 'http://ns.valcruz.local/sprout/1.0/' },
+    WRITABLE => 'string',
+    Timestamp           => { Writable => 'string' },
+    'Location-index'    => { Writable => 'string' },
+    CameraType          => { Writable => 'string' },
+    ImagingDevice       => { Writable => 'string' },
+    CameraTableLocation => { Writable => 'string' },
+    BaselineHeight      => { Writable => 'string' },
+    Ptz                 => { Writable => 'string' },
+    PtzParameters       => { Writable => 'string' },
+    RoomCoordinates     => { Writable => 'string' },
+    Location            => { Writable => 'string' },
+);
+
+1;  #end

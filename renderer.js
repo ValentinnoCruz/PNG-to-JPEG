@@ -14,10 +14,12 @@ const convertBtn = $('convertBtn');
 const recursiveInput = $('recursiveInput');
 const preserveFoldersInput = $('preserveFoldersInput');
 const qualityInput = $('qualityInput');
+const samplingInput = $('samplingInput');
 const backgroundInput = $('backgroundInput');
 const verifyTagsInput = $('verifyTagsInput');
 const magickStatus = $('magickStatus');
 const exiftoolStatus = $('exiftoolStatus');
+const configStatus = $('configStatus');
 const inputSummary = $('inputSummary');
 const outputSummary = $('outputSummary');
 const progressText = $('progressText');
@@ -74,10 +76,17 @@ checkToolsBtn.addEventListener('click', async () => {
       result.exiftool.ok ? `ExifTool: Found (${result.exiftool.command})` : 'ExifTool: Missing'
     );
 
+    setStatus(
+      configStatus,
+      result.exiftoolConfig.ok,
+      result.exiftoolConfig.ok ? `ExifTool Config: Found (${result.exiftoolConfig.path})` : 'ExifTool Config: Missing'
+    );
+
     if (result.magick.ok) log(`ImageMagick OK: ${result.magick.version}`, 'success');
     if (result.exiftool.ok) log(`ExifTool OK: ${result.exiftool.version}`, 'success');
-    if (!result.magick.ok || !result.exiftool.ok) {
-      log('Missing tools. Install ImageMagick/ExifTool or place magick.exe and exiftool.exe in the tools folder.', 'error');
+    if (result.exiftoolConfig.ok) log(`Custom XMP config OK: ${result.exiftoolConfig.path}`, 'success');
+    if (!result.magick.ok || !result.exiftool.ok || !result.exiftoolConfig.ok) {
+      log('Missing requirement. Install ImageMagick/ExifTool or confirm exiftool_config is present in the app folder.', 'error');
     }
   } catch (error) {
     log(`Tool check failed: ${error.message}`, 'error');
@@ -143,7 +152,8 @@ convertBtn.addEventListener('click', async () => {
       sourceRoot: state.sourceRoot,
       outputDir: state.outputDir,
       preserveFolders: preserveFoldersInput.checked,
-      quality: Number(qualityInput.value || 95),
+      quality: Number(qualityInput.value || 92),
+      samplingFactor: samplingInput.value || '4:2:0',
       background: backgroundInput.value || 'white',
       verifyTags: verifyTagsInput.value || ''
     });
