@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PNG to JPEG Metadata Converter v4.2</title>
+  <title>PNG to JPEG Metadata Converter v4.3</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="app-shell">
     <section class="hero">
       <div>
-        <p class="eyebrow">Offline QA Utility · v4.2</p>
+        <p class="eyebrow">Offline QA Utility · v4.3</p>
         <h1>PNG to JPEG Metadata Utility</h1>
-        <p class="subtitle">Convert PNGs into JPEGs that emulate the current real metadata structure, or view/edit project metadata in bulk.</p>
+        <p class="subtitle">Convert PNGs into JPEGs that emulate the current real metadata structure, or safely view/edit project and advanced metadata in bulk.</p>
       </div>
       <div class="hero-badge">PNG → JPG<br><span>VIEW + EDIT XMP</span></div>
     </section>
@@ -25,7 +25,7 @@
     <section id="convertTab" class="tab-panel active">
       <section class="card notice-card">
         <h2>Converter mode</h2>
-        <p>v4.2 uses a real JPEG as the metadata template, overwrites project fields with values from the PNG, and syncs EXIF date fields from the PNG/project timestamp by default so the dates do not conflict.</p>
+        <p>v4.3 uses a real JPEG as the metadata template, overwrites project fields with values from the PNG, and syncs EXIF date fields from the PNG/project timestamp by default so the dates do not conflict.</p>
       </section>
 
       <section class="card">
@@ -122,7 +122,7 @@
     <section id="editorTab" class="tab-panel">
       <section class="card notice-card">
         <h2>Metadata Viewer / Bulk Editor</h2>
-        <p>View the project metadata fields from JPEG/PNG images. Edit one image, or apply filled-in fields to all loaded images. Edits are written as individual XMP-Sprout tags, matching the current JPEG workflow.</p>
+        <p>View image metadata, safely edit project metadata, and optionally edit advanced EXIF/template fields. Project edits are written as individual XMP-Sprout tags, matching the current JPEG workflow.</p>
       </section>
 
       <section class="card">
@@ -166,8 +166,8 @@
       </section>
 
       <section class="card settings-card">
-        <h2>3. Edit project metadata</h2>
-        <p class="hint">For bulk edits, fill only the fields you want to change, then use “Apply filled fields to all loaded images.”</p>
+        <h2>3. Standard editor — safe project fields</h2>
+        <p class="hint">For bulk edits, fill only the fields you want to change, then use “Apply filled fields to all loaded images.” These are the project fields used by the image workflow.</p>
         <div class="settings-grid editor-grid">
           <label>Timestamp <input id="editTimestamp" type="text" placeholder="2025-02-28T11:16:11.072-0500" /></label>
           <label>Location-index <input id="editLocationIndex" type="text" /></label>
@@ -181,6 +181,32 @@
         <label class="full-label">PtzParameters <textarea id="editPtzParameters" rows="3"></textarea></label>
         <label class="full-label">RoomCoordinates <textarea id="editRoomCoordinates" rows="3" placeholder='{"x":387,"y":262}'></textarea></label>
         <label class="check-label advanced-check"><input id="editorSyncExifDatesInput" type="checkbox" checked /> If Timestamp is edited, sync EXIF date fields too</label>
+        <label class="check-label advanced-check"><input id="editorBackupInput" type="checkbox" checked /> Create backup copies before editing</label>
+
+        <details class="advanced-panel">
+          <summary>Advanced editor — EXIF/template fields</summary>
+          <p class="hint">Use these only when you need the image to emulate a real camera/app JPEG more closely. Leave fields blank if you do not want to change them.</p>
+          <div class="settings-grid editor-grid">
+            <label>Make <input id="editMake" type="text" placeholder="AXIS" /></label>
+            <label>Model <input id="editModel" type="text" placeholder="P5655-E" /></label>
+            <label>Software <input id="editSoftware" type="text" placeholder="Sprout Carriage" /></label>
+            <label>ExposureTime <input id="editExposureTime" type="text" placeholder="1/500" /></label>
+            <label>SerialNumber <input id="editSerialNumber" type="text" /></label>
+            <label>ColorSpace <input id="editColorSpace" type="text" placeholder="sRGB" /></label>
+            <label>DateTimeOriginal <input id="editDateTimeOriginal" type="text" placeholder="2026:05:19 19:34:15" /></label>
+            <label>CreateDate <input id="editCreateDate" type="text" placeholder="2026:05:19 19:34:15" /></label>
+            <label>ModifyDate <input id="editModifyDate" type="text" placeholder="2026:05:19 19:34:15" /></label>
+            <label>XResolution <input id="editXResolution" type="text" placeholder="72" /></label>
+            <label>YResolution <input id="editYResolution" type="text" placeholder="72" /></label>
+            <label>ResolutionUnit <input id="editResolutionUnit" type="text" placeholder="inches" /></label>
+          </div>
+        </details>
+
+        <details class="readonly-panel">
+          <summary>Read-only technical fields for selected image</summary>
+          <div id="readOnlyMetadata" class="readonly-grid muted">Select an image to view technical fields.</div>
+        </details>
+
         <div class="button-row">
           <button id="clearEditFormBtn">Clear Form</button>
           <button id="applySelectedBtn" class="primary">Apply filled fields to selected image</button>
