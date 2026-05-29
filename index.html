@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Image Metadata Manager v4.7</title>
+  <title>Image Metadata Manager v4.8</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-icon">▣</span><span>Image Metadata Manager v4.7</span></div>
+      <div class="brand"><span class="brand-icon">▣</span><span>Image Metadata Manager v4.8</span></div>
       <nav class="top-tabs">
         <button id="convertTabBtn" class="top-tab active">PNG to JPEG Converter</button>
         <button id="editorTabBtn" class="top-tab">Metadata Viewer / Editor</button>
@@ -166,68 +166,117 @@
     </section>
 
     <section id="editorTab" class="tab-panel">
-      <div class="editor-layout">
-        <aside class="metadata-sidebar">
-          <div class="sidebar-section">
-            <h3>Table View</h3>
-            <button class="view-mode active" data-view="project">▣ Project Fields</button>
-            <button class="view-mode" data-view="camera">▣ Camera / EXIF</button>
-            <button class="view-mode" data-view="technical">▣ Technical</button>
-            <button class="view-mode" data-view="all">☰ Mixed Summary</button>
-          </div>
-          <div class="sidebar-section">
-            <h3>All Metadata Panel Filters</h3>
-            <p class="sidebar-help">These filters only affect the Selected Image → All Metadata panel.</p>
-            <label><input class="group-filter" type="checkbox" value="XMP" checked /> XMP / Project <span id="countXMP" class="count-pill">0</span></label>
-            <label><input class="group-filter" type="checkbox" value="EXIF" checked /> EXIF <span id="countEXIF" class="count-pill">0</span></label>
-            <label><input class="group-filter" type="checkbox" value="JFIF" checked /> JFIF <span id="countJFIF" class="count-pill">0</span></label>
-            <label><input class="group-filter" type="checkbox" value="File" checked /> File <span id="countFile" class="count-pill">0</span></label>
-            <label><input class="group-filter" type="checkbox" value="Composite" checked /> Composite <span id="countComposite" class="count-pill">0</span></label>
-            <label><input class="group-filter" type="checkbox" value="ICC_Profile" /> ICC Profile <span id="countICC_Profile" class="count-pill">0</span></label>
-            <label><input class="group-filter" type="checkbox" value="PNG" /> PNG <span id="countPNG" class="count-pill">0</span></label>
-          </div>
-          <div class="sidebar-section">
-            <h3>Quick Actions</h3>
-            <button id="selectEditorFilesBtn">＋ Add Files</button>
+      <div class="editor-v48">
+
+        <!-- Session strip -->
+        <div class="editor-session panel">
+          <span class="session-label">Session</span>
+          <span class="session-val"><b id="editorSummary">No images loaded.</b></span>
+          <span class="session-divider"></span>
+          <span class="session-val muted"><b id="selectionSummary">0 selected</b></span>
+          <span class="session-spacer"></span>
+          <button id="selectEditorFilesBtn">＋ Add Files</button>
+          <span class="folder-combo" title="Add Folder — toggle whether subfolders are included">
             <button id="selectEditorFolderBtn">▣ Add Folder</button>
-            <button id="refreshMetadataBtn">↻ Refresh</button>
-            <button id="clearEditorBtn">🗑 Clear List</button>
-            <label class="check-label"><input id="editorRecursiveInput" type="checkbox" checked /> Include subfolders</label>
-          </div>
-        </aside>
+            <label class="recursive-inline"><input id="editorRecursiveInput" type="checkbox" checked /> incl. subfolders</label>
+          </span>
+          <button id="refreshMetadataBtn" title="Re-read files from disk (use after editing files outside the app)">↻ Refresh</button>
+          <button id="clearEditorBtn">🗑 Clear</button>
+          <input id="metadataSearchInput" type="search" placeholder="🔍 Search filename or any visible value..." />
+        </div>
 
-        <section class="metadata-main">
-          <div class="toolbar">
-            <div class="button-row">
-              <button id="viewAllMetadataBtn">👁 Open All Metadata Panel</button>
-              <button id="bulkEditSelectedBtn" class="accent">✎ Bulk Edit Selected</button>
-              <button id="expandSelectedPanelBtn">⇔ Expand Details Panel</button>
+        <!-- Mode switcher -->
+        <div class="editor-mode-switcher">
+          <div class="editor-mode-pills">
+            <button class="editor-mode-pill active" data-mode="browse">BROWSE</button>
+            <button class="editor-mode-pill" data-mode="edit">EDIT <span class="mode-count" id="editModeCount">0</span></button>
+            <button class="editor-mode-pill" data-mode="inspect">INSPECT</button>
+          </div>
+        </div>
+
+        <!-- Canvas -->
+        <div class="editor-canvas">
+
+          <!-- BROWSE mode -->
+          <section class="editor-screen active" data-screen="browse">
+            <div class="browse-toolbar">
+              <div class="preset-pills">
+                <button class="view-mode active" data-view="project">Project</button>
+                <button class="view-mode" data-view="camera">Camera</button>
+                <button class="view-mode" data-view="technical">Technical</button>
+                <button class="view-mode" data-view="all">Mixed</button>
+                <button class="view-mode preset-custom" data-view="custom" hidden>Custom</button>
+              </div>
+              <div class="cols-dropdown">
+                <button id="colsDropdownBtn" type="button">⊞ Columns ▾</button>
+                <div class="cols-menu" id="colsMenu" hidden>
+                  <h4><label class="cols-group-head"><input id="colsCheckAllProject" type="checkbox" /> <span>Project Fields</span></label></h4>
+                  <div class="col-grid" id="colsListProject"></div>
+                  <h4><label class="cols-group-head"><input id="colsCheckAllAdvanced" type="checkbox" /> <span>Advanced / EXIF</span></label></h4>
+                  <div class="col-grid" id="colsListAdvanced"></div>
+                  <div class="cols-menu-footer">
+                    <button id="colsShowAll" type="button">Show all</button>
+                    <button id="colsHideAll" type="button">Hide all</button>
+                    <button id="colsReset" type="button">Reset to preset</button>
+                  </div>
+                </div>
+              </div>
+              <span class="rowcount muted" id="browseRowCount">0 rows</span>
+              <span class="toolbar-spacer"></span>
               <button id="clearSelectionBtn">Clear Selection</button>
+              <button id="bulkEditSelectedBtn" class="primary">✎ Edit Selected (<span id="bulkEditCount">0</span>)</button>
             </div>
-            <div class="search-wrap"><input id="metadataSearchInput" type="search" placeholder="Search current table and All Metadata panel..." /></div>
-          </div>
 
-          <div class="metadata-content">
-            <section class="table-panel panel">
-              <div class="table-status"><span id="editorSummary" class="summary muted">No images loaded.</span><span id="selectionSummary" class="selection-summary">0 selected</span></div>
-              <div class="table-wrap">
-                <table class="metadata-table">
-                  <thead id="metadataTableHead"></thead>
-                  <tbody id="metadataTableBody"><tr><td class="muted">No metadata loaded.</td></tr></tbody>
-                </table>
+            <div class="browse-grid" id="browseGrid">
+              <div class="table-panel panel">
+                <div class="table-wrap">
+                  <table class="metadata-table">
+                    <thead id="metadataTableHead"></thead>
+                    <tbody id="metadataTableBody"><tr><td class="muted">No images loaded.</td></tr></tbody>
+                  </table>
+                </div>
               </div>
-            </section>
+              <aside class="preview-rail panel" id="browsePreviewRail">
+                <div class="rail-head">
+                  <h3>Preview</h3>
+                  <button class="rail-collapse" id="railCollapseBtn" title="Hide preview" type="button">✕</button>
+                </div>
+                <div class="rail-img">
+                  <img id="selectedPreviewImage" alt="Selected image preview" hidden />
+                  <span id="selectedPreviewPlaceholder" class="muted">Click a row to preview</span>
+                </div>
+                <div class="rail-fn" id="selectedFileLabel">No image selected.</div>
+                <div class="rail-tech muted" id="selectedTechnicalSummary">Select an image to view details.</div>
+                <div class="rail-fields" id="railProjectFields"></div>
+                <div class="rail-actions">
+                  <button id="railInspectBtn" type="button">🔍 Inspect</button>
+                  <button id="railEditBtn" class="primary" type="button">✎ Edit this</button>
+                </div>
+              </aside>
+            </div>
 
-            <aside class="selected-panel panel">
-              <div class="selected-header">
-                <div><h2>Selected Image</h2><p id="selectedFileLabel" class="muted">No image selected.</p></div>
-                <div class="tiny-nav"><span id="selectedCountLabel">0 of 0</span></div>
+            <p class="help-tip" id="browseHelpTip">
+              Tip: double-click a row to jump straight into Edit mode for that one image. Click a row to preview it on the right.
+              <button id="railShowBtn" class="rail-show" hidden type="button">◀ Show preview</button>
+              Keyboard: <span class="keymap">B</span> Browse · <span class="keymap">E</span> Edit · <span class="keymap">I</span> Inspect.
+            </p>
+          </section>
+
+          <!-- EDIT mode -->
+          <section class="editor-screen" data-screen="edit">
+            <div class="edit-banner" id="editBanner">
+              <span class="banner-text">⚠ <b id="editBannerCount">Editing 0 images</b> — only ticked fields will be written.</span>
+              <button id="backToBrowseBtn" class="banner-link" type="button">change selection</button>
+            </div>
+
+            <div class="edit-form panel">
+              <div class="sub-tabs">
+                <button class="sub-tab active" data-subtab="projectEditPanel" type="button">Project Fields</button>
+                <button class="sub-tab" data-subtab="advancedEditPanel" type="button">Advanced</button>
               </div>
-              <div class="selected-preview"><img id="selectedPreviewImage" class="preview-image" alt="Selected image preview" hidden /><div id="selectedTechnicalSummary" class="muted">Select an image to view details.</div></div>
-              <div class="sub-tabs"><button class="sub-tab active" data-subtab="projectEditPanel">Project Fields</button><button class="sub-tab" data-subtab="advancedEditPanel">Advanced Fields</button><button class="sub-tab" data-subtab="fullMetaPanel">All Metadata</button></div>
 
               <section id="projectEditPanel" class="sub-panel active">
-                <p class="hint">Edit one image or select multiple images. Only checked fields are applied; unchecked metadata stays untouched.</p>
+                <p class="hint">Only checked fields are applied; unchecked metadata stays untouched.</p>
                 <div class="field-grid">
                   <label class="editable-field"><input class="edit-check" data-kind="project" data-tag="Timestamp" id="checkTimestamp" type="checkbox" /><span>Timestamp</span><input id="editTimestamp" type="text" placeholder="2025:02:28 11:16:11.072-0500" /></label>
                   <label class="editable-field"><input class="edit-check" data-kind="project" data-tag="Location-index" id="checkLocationIndex" type="checkbox" /><span>Location-index</span><input id="editLocationIndex" type="text" placeholder="1612" /></label>
@@ -260,27 +309,61 @@
                 </div>
               </section>
 
-              <section id="fullMetaPanel" class="sub-panel">
-                <div id="allMetadataView" class="all-meta-view muted">Select an image, then click “Open All Metadata Panel.” Use the left group filters to show/hide groups.</div>
-              </section>
-
-              <div class="editor-options">
-                <label class="check-label"><input id="editorSyncExifDatesInput" type="checkbox" checked /> Sync EXIF dates when Timestamp changes</label>
+              <div class="sticky-apply">
                 <label class="check-label"><input id="editorBackupInput" type="checkbox" checked /> Backup before edit</label>
-              </div>
-              <div class="button-row sticky-actions">
-                <button id="clearEditFormBtn">Reset Fields</button>
-                <button id="applySelectedBtn" class="primary">Apply Checked Fields</button>
+                <input id="editorSyncExifDatesInput" type="checkbox" hidden />
+                <div class="apply-actions">
+                  <button id="clearEditFormBtn" type="button">Reset Fields</button>
+                  <button id="applySelectedBtn" class="primary" type="button">▶ Apply to <span id="applyCount">0</span> ✓</button>
+                </div>
               </div>
               <div id="editorStatus" class="summary muted">No selected image.</div>
-            </aside>
-          </div>
-
-          <section class="panel log-panel editor-log-panel">
-            <div class="panel-header"><h2>Activity / Log</h2><button id="clearEditorLogBtn" class="ghost">Clear Log</button></div>
-            <pre id="editorLogOutput" class="log">Load images to begin.</pre>
+            </div>
           </section>
+
+          <!-- INSPECT mode -->
+          <section class="editor-screen" data-screen="inspect">
+            <div class="inspect-toolbar">
+              <span class="muted">Viewing</span>
+              <b id="inspectFilename">—</b>
+              <span class="muted" id="selectedCountLabel">0 of 0</span>
+              <button id="inspectPrevBtn" type="button">◀ prev</button>
+              <button id="inspectNextBtn" type="button">next ▶</button>
+              <span class="toolbar-spacer"></span>
+              <input id="inspectSearchInput" type="search" placeholder="🔍 Filter tags by key or value..." />
+            </div>
+
+            <div class="chip-row" id="inspectChipRow">
+              <label class="chip"><input class="group-filter" type="checkbox" value="XMP" checked /> XMP <span id="countXMP" class="count">0</span></label>
+              <label class="chip"><input class="group-filter" type="checkbox" value="EXIF" checked /> EXIF <span id="countEXIF" class="count">0</span></label>
+              <label class="chip"><input class="group-filter" type="checkbox" value="File" checked /> File <span id="countFile" class="count">0</span></label>
+              <label class="chip"><input class="group-filter" type="checkbox" value="Composite" checked /> Composite <span id="countComposite" class="count">0</span></label>
+              <label class="chip"><input class="group-filter" type="checkbox" value="JFIF" checked /> JFIF <span id="countJFIF" class="count">0</span></label>
+              <label class="chip"><input class="group-filter" type="checkbox" value="ICC_Profile" /> ICC <span id="countICC_Profile" class="count">0</span></label>
+              <label class="chip"><input class="group-filter" type="checkbox" value="PNG" /> PNG <span id="countPNG" class="count">0</span></label>
+            </div>
+
+            <div class="inspect-grid">
+              <aside class="inspect-preview panel">
+                <div class="rail-img big">
+                  <img id="inspectPreviewImage" alt="Inspect image preview" hidden />
+                  <span id="inspectPreviewPlaceholder" class="muted">Select an image first</span>
+                </div>
+                <div id="inspectFilename2" class="rail-fn">—</div>
+                <div id="inspectTechnical" class="muted">Select an image to view details.</div>
+              </aside>
+              <div id="allMetadataView" class="all-meta-view panel">Select an image to view its metadata.</div>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- Log dock -->
+        <section class="panel editor-log-panel">
+          <div class="panel-header"><h2>Activity / Log</h2><button id="clearEditorLogBtn" class="ghost">Clear Log</button></div>
+          <pre id="editorLogOutput" class="log">Load images to begin.</pre>
         </section>
+
       </div>
     </section>
   </main>

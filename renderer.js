@@ -12,7 +12,9 @@ const editorState = {
   selectedIndex: -1,
   checkedFiles: new Set(),
   viewMode: 'project',
-  fullMetadata: []
+  fullMetadata: [],
+  mode: 'browse',
+  customColumns: null
 };
 
 const PROJECT_TAGS = [
@@ -133,7 +135,6 @@ const refreshMetadataBtn = $('refreshMetadataBtn');
 const clearEditorBtn = $('clearEditorBtn');
 const clearSelectionBtn = $('clearSelectionBtn');
 const bulkEditSelectedBtn = $('bulkEditSelectedBtn');
-const viewAllMetadataBtn = $('viewAllMetadataBtn');
 const editorRecursiveInput = $('editorRecursiveInput');
 const editorSummary = $('editorSummary');
 const selectionSummary = $('selectionSummary');
@@ -151,9 +152,38 @@ const selectedFileLabel = $('selectedFileLabel');
 const selectedCountLabel = $('selectedCountLabel');
 const selectedTechnicalSummary = $('selectedTechnicalSummary');
 const allMetadataView = $('allMetadataView');
-const expandSelectedPanelBtn = $('expandSelectedPanelBtn');
 const selectedPreviewImage = $('selectedPreviewImage');
 const selectedPreviewPlaceholder = $('selectedPreviewPlaceholder');
+const inspectPreviewImage = $('inspectPreviewImage');
+const inspectPreviewPlaceholder = $('inspectPreviewPlaceholder');
+const inspectFilename = $('inspectFilename');
+const inspectFilename2 = $('inspectFilename2');
+const inspectTechnical = $('inspectTechnical');
+const inspectSearchInput = $('inspectSearchInput');
+const inspectPrevBtn = $('inspectPrevBtn');
+const inspectNextBtn = $('inspectNextBtn');
+const railProjectFields = $('railProjectFields');
+const railInspectBtn = $('railInspectBtn');
+const railEditBtn = $('railEditBtn');
+const railCollapseBtn = $('railCollapseBtn');
+const railShowBtn = $('railShowBtn');
+const browseGrid = $('browseGrid');
+const editModeCount = $('editModeCount');
+const editBannerCount = $('editBannerCount');
+const applyCount = $('applyCount');
+const bulkEditCount = $('bulkEditCount');
+const browseRowCount = $('browseRowCount');
+const backToBrowseBtn = $('backToBrowseBtn');
+const colsDropdownBtn = $('colsDropdownBtn');
+const colsMenu = $('colsMenu');
+const colsListProject = $('colsListProject');
+const colsListAdvanced = $('colsListAdvanced');
+const colsCheckAllProject = $('colsCheckAllProject');
+const colsCheckAllAdvanced = $('colsCheckAllAdvanced');
+const colsShowAll = $('colsShowAll');
+const colsHideAll = $('colsHideAll');
+const colsReset = $('colsReset');
+const expandSelectedPanelBtn = null;
 
 const editInputs = {
   Timestamp: $('editTimestamp'),
@@ -292,11 +322,21 @@ function updateTemplateSummary() {
 }
 
 function updateEditorSummary() {
-  editorSummary.textContent = editorState.files.length
-    ? `${editorState.files.length} image(s) loaded${editorState.sourceRoot ? ` from ${editorState.sourceRoot}` : ''}.`
-    : 'No images loaded.';
-  editorSummary.className = editorState.files.length ? 'summary' : 'summary muted';
-  selectionSummary.textContent = `${editorState.checkedFiles.size} selected`;
+  const n = editorState.files.length;
+  editorSummary.textContent = n ? `${n} image(s) loaded${editorState.sourceRoot ? ` from ${editorState.sourceRoot}` : ''}` : 'No images loaded';
+  editorSummary.className = n ? '' : 'muted';
+  const c = editorState.checkedFiles.size;
+  selectionSummary.textContent = `${c} selected`;
+  if (editModeCount) editModeCount.textContent = c;
+  if (bulkEditCount) bulkEditCount.textContent = c;
+  if (editBannerCount) editBannerCount.textContent = `Editing ${c} image${c === 1 ? '' : 's'}`;
+  updateApplyCount();
+}
+
+function updateApplyCount() {
+  if (!applyCount) return;
+  const n = editorState.checkedFiles.size || (editorState.selectedIndex >= 0 ? 1 : 0);
+  applyCount.textContent = n;
 }
 
 function getVisibleRows() {
@@ -309,10 +349,11 @@ function getVisibleRows() {
 }
 
 function renderMetadataTable() {
-  const columns = COLUMN_PRESETS[editorState.viewMode] || COLUMN_PRESETS.project;
+  const columns = getActiveColumns();
   metadataTableHead.innerHTML = `<tr><th><input id="selectAllVisible" type="checkbox" /></th>${columns.map(([, label]) => `<th>${label}</th>`).join('')}</tr>`;
 
   const rows = getVisibleRows();
+  if (browseRowCount) browseRowCount.textContent = `${rows.length} row${rows.length === 1 ? '' : 's'}`;
   if (!rows.length) {
     metadataTableBody.innerHTML = `<tr><td colspan="${columns.length + 1}" class="muted">No metadata loaded.</td></tr>`;
     const selectAll = $('selectAllVisible');
@@ -343,6 +384,15 @@ function renderMetadataTable() {
 
   $$('tr[data-index]', metadataTableBody).forEach((tr) => {
     tr.addEventListener('click', () => selectEditorRow(Number(tr.getAttribute('data-index'))));
+    tr.addEventListener('dblclick', () => {
+      const idx = Number(tr.getAttribute('data-index'));
+      const row = editorState.rows[idx];
+      if (!row) return;
+      editorState.checkedFiles.clear();
+      editorState.checkedFiles.add(row.FilePath);
+      selectEditorRow(idx);
+      setEditorMode('edit');
+    });
   });
 
   const selectAll = $('selectAllVisible');
@@ -371,22 +421,29 @@ function clearImagePreview() {
     selectedPreviewImage.hidden = true;
     selectedPreviewImage.removeAttribute('src');
   }
-  if (selectedPreviewPlaceholder) { selectedPreviewPlaceholder.hidden = false; selectedPreviewPlaceholder.textContent = 'Preview'; }
+  if (selectedPreviewPlaceholder) { selectedPreviewPlaceholder.hidden = false; selectedPreviewPlaceholder.textContent = 'Click a row to preview'; }
+  if (inspectPreviewImage) { inspectPreviewImage.hidden = true; inspectPreviewImage.removeAttribute('src'); }
+  if (inspectPreviewPlaceholder) { inspectPreviewPlaceholder.hidden = false; inspectPreviewPlaceholder.textContent = 'Select an image first'; }
 }
 
 async function loadImagePreview(filePath) {
   clearImagePreview();
-  if (!filePath || !selectedPreviewImage) return;
+  if (!filePath) return;
 
   try {
     const result = await window.converterApi.getImagePreview(filePath);
-    selectedPreviewImage.src = result.dataUrl;
-    selectedPreviewImage.hidden = false;
+    if (selectedPreviewImage) { selectedPreviewImage.src = result.dataUrl; selectedPreviewImage.hidden = false; }
     if (selectedPreviewPlaceholder) selectedPreviewPlaceholder.hidden = true;
+    if (inspectPreviewImage) { inspectPreviewImage.src = result.dataUrl; inspectPreviewImage.hidden = false; }
+    if (inspectPreviewPlaceholder) inspectPreviewPlaceholder.hidden = true;
   } catch (error) {
     if (selectedPreviewPlaceholder) {
       selectedPreviewPlaceholder.hidden = false;
       selectedPreviewPlaceholder.textContent = 'Preview unavailable';
+    }
+    if (inspectPreviewPlaceholder) {
+      inspectPreviewPlaceholder.hidden = false;
+      inspectPreviewPlaceholder.textContent = 'Preview unavailable';
     }
   }
 }
@@ -403,11 +460,23 @@ function selectEditorRow(index) {
 
   selectedFileLabel.textContent = row.FileName;
   selectedCountLabel.textContent = `${index + 1} of ${editorState.rows.length}`;
-  selectedTechnicalSummary.textContent = `${row.FileType || 'Image'} · ${row.ImageSize || `${row.ImageWidth}x${row.ImageHeight}`} · ${row.FileSize || ''}`;
+  const tech = `${row.FileType || 'Image'} \u00b7 ${row.ImageSize || `${row.ImageWidth}x${row.ImageHeight}`} \u00b7 ${row.FileSize || ''}`;
+  selectedTechnicalSummary.textContent = tech;
+  if (inspectFilename) inspectFilename.textContent = row.FileName;
+  if (inspectFilename2) inspectFilename2.textContent = row.FileName;
+  if (inspectTechnical) inspectTechnical.textContent = tech;
   editorStatus.textContent = `Selected: ${row.FileName}. Check only the fields you want to apply.`;
   editorStatus.className = 'summary';
+  renderRailFields(row);
   renderMetadataTable();
-  loadFullMetadataForSelected(false);
+  if (editorState.mode === 'inspect') loadFullMetadataForSelected(false);
+  updateApplyCount();
+}
+
+function renderRailFields(row) {
+  if (!railProjectFields) return;
+  const keys = ['Timestamp', 'Location', 'CameraTableLocation', 'ImagingDevice', 'CameraType', 'Location-index'];
+  railProjectFields.innerHTML = keys.map((k) => `<span class="k">${k}</span><span class="v">${escapeAttr(truncate(row[k], 40)) || '<em>—</em>'}</span>`).join('');
 }
 
 function uncheckAllEditFields() {
@@ -474,7 +543,7 @@ function selectedGroups() {
 
 function renderAllMetadata() {
   const groups = selectedGroups();
-  const query = metadataSearchInput.value.trim().toLowerCase();
+  const query = (inspectSearchInput ? inspectSearchInput.value : '').trim().toLowerCase();
   const entries = editorState.fullMetadata.filter((item) => {
     const groupMatch = groups.has(item.group);
     const queryMatch = !query || item.group.toLowerCase().includes(query) || item.field.toLowerCase().includes(query) || item.value.toLowerCase().includes(query);
@@ -512,7 +581,7 @@ async function loadFullMetadataForSelected(switchPanel = true) {
     editorState.fullMetadata = parseMetadataText(result.text);
     updateMetadataGroupCounts(editorState.fullMetadata);
     renderAllMetadata();
-    if (switchPanel) setSubPanel('fullMetaPanel');
+    if (switchPanel) setEditorMode('inspect');
   } catch (error) {
     allMetadataView.innerHTML = `<span class="muted">Could not read metadata: ${escapeAttr(error.message)}</span>`;
   }
@@ -714,10 +783,13 @@ clearSelectionBtn.addEventListener('click', () => {
   updateEditorSummary();
 });
 bulkEditSelectedBtn.addEventListener('click', () => {
-  setSubPanel('projectEditPanel');
-  editorStatus.textContent = `${editorState.checkedFiles.size || (editorState.selectedIndex >= 0 ? 1 : 0)} image(s) targeted. Check the fields you want to edit.`;
+  if (!editorState.checkedFiles.size && editorState.selectedIndex >= 0) {
+    const row = editorState.rows[editorState.selectedIndex];
+    if (row) editorState.checkedFiles.add(row.FilePath);
+  }
+  setEditorMode('edit');
+  editorStatus.textContent = `${editorState.checkedFiles.size} image(s) targeted. Check the fields you want to edit.`;
 });
-viewAllMetadataBtn.addEventListener('click', () => loadFullMetadataForSelected(true));
 if (expandSelectedPanelBtn) {
   expandSelectedPanelBtn.addEventListener('click', () => {
     editorTab.classList.toggle('details-expanded');
@@ -726,7 +798,8 @@ if (expandSelectedPanelBtn) {
   });
 }
 
-metadataSearchInput.addEventListener('input', () => { renderMetadataTable(); renderAllMetadata(); });
+metadataSearchInput.addEventListener('input', () => { renderMetadataTable(); });
+if (inspectSearchInput) inspectSearchInput.addEventListener('input', renderAllMetadata);
 $$('.group-filter').forEach((input) => input.addEventListener('change', renderAllMetadata));
 $$('.view-mode').forEach((button) => {
   button.addEventListener('click', () => {
@@ -775,6 +848,185 @@ applySelectedBtn.addEventListener('click', async () => {
   } finally {
     applySelectedBtn.disabled = false;
   }
+});
+
+// === v4.8: column registry, mode switcher, columns dropdown, navigation ===
+const ALL_COLUMNS = [
+  ['FileName', 'File Name', 'project'],
+  ['Timestamp', 'Timestamp', 'project'],
+  ['Location', 'Location', 'project'],
+  ['CameraTableLocation', 'CameraTableLocation', 'project'],
+  ['CameraType', 'CameraType', 'project'],
+  ['ImagingDevice', 'ImagingDevice', 'project'],
+  ['Location-index', 'Location-index', 'project'],
+  ['BaselineHeight', 'BaselineHeight', 'project'],
+  ['Ptz', 'Ptz', 'project'],
+  ['PtzParameters', 'PtzParameters', 'project'],
+  ['RoomCoordinates', 'RoomCoordinates', 'project'],
+  ['Make', 'Make', 'advanced'],
+  ['Model', 'Model', 'advanced'],
+  ['Software', 'Software', 'advanced'],
+  ['ExposureTime', 'ExposureTime', 'advanced'],
+  ['SerialNumber', 'SerialNumber', 'advanced'],
+  ['ColorSpace', 'ColorSpace', 'advanced'],
+  ['DateTimeOriginal', 'DateTimeOriginal', 'advanced'],
+  ['CreateDate', 'CreateDate', 'advanced'],
+  ['ModifyDate', 'ModifyDate', 'advanced'],
+  ['XResolution', 'XResolution', 'advanced'],
+  ['YResolution', 'YResolution', 'advanced'],
+  ['ResolutionUnit', 'ResolutionUnit', 'advanced'],
+  ['FileType', 'FileType', 'advanced'],
+  ['FileSize', 'FileSize', 'advanced'],
+  ['ImageSize', 'ImageSize', 'advanced']
+];
+
+function getActiveColumns() {
+  if (editorState.viewMode === 'custom' && editorState.customColumns?.length) {
+    return editorState.customColumns.map((key) => {
+      const col = ALL_COLUMNS.find((c) => c[0] === key);
+      return col ? [col[0], col[1]] : [key, key];
+    });
+  }
+  return COLUMN_PRESETS[editorState.viewMode] || COLUMN_PRESETS.project;
+}
+
+function buildColumnsDropdown() {
+  if (!colsListProject || !colsListAdvanced) return;
+  const activeKeys = new Set(getActiveColumns().map(([k]) => k));
+  const renderGroup = (kind) => ALL_COLUMNS.filter((c) => c[2] === kind).map(([key, label]) => `
+    <label><input type="checkbox" data-col="${key}" ${activeKeys.has(key) ? 'checked' : ''} /> ${label}</label>
+  `).join('');
+  colsListProject.innerHTML = renderGroup('project');
+  colsListAdvanced.innerHTML = renderGroup('advanced');
+
+  const syncGroupHeads = () => {
+    const projBoxes = $$('input[data-col]', colsListProject);
+    const advBoxes = $$('input[data-col]', colsListAdvanced);
+    if (colsCheckAllProject) colsCheckAllProject.checked = projBoxes.length > 0 && projBoxes.every((b) => b.checked);
+    if (colsCheckAllAdvanced) colsCheckAllAdvanced.checked = advBoxes.length > 0 && advBoxes.every((b) => b.checked);
+  };
+  syncGroupHeads();
+
+  $$('input[data-col]', colsMenu).forEach((cb) => {
+    cb.addEventListener('change', () => {
+      const checked = $$('input[data-col]', colsMenu).filter((b) => b.checked).map((b) => b.getAttribute('data-col'));
+      editorState.customColumns = checked;
+      editorState.viewMode = 'custom';
+      $$('.view-mode').forEach((btn) => btn.classList.toggle('active', btn.getAttribute('data-view') === 'custom'));
+      const customBtn = document.querySelector('.preset-custom');
+      if (customBtn) customBtn.hidden = false;
+      renderMetadataTable();
+      syncGroupHeads();
+    });
+  });
+}
+
+function toggleGroup(headEl, listEl) {
+  if (!headEl || !listEl) return;
+  headEl.addEventListener('change', () => {
+    $$('input[data-col]', listEl).forEach((cb) => { cb.checked = headEl.checked; });
+    const evt = new Event('change');
+    const first = listEl.querySelector('input[data-col]');
+    if (first) first.dispatchEvent(evt);
+  });
+}
+toggleGroup(colsCheckAllProject, colsListProject);
+toggleGroup(colsCheckAllAdvanced, colsListAdvanced);
+
+if (colsDropdownBtn && colsMenu) {
+  colsDropdownBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isHidden = colsMenu.hasAttribute('hidden');
+    if (isHidden) { buildColumnsDropdown(); colsMenu.removeAttribute('hidden'); }
+    else colsMenu.setAttribute('hidden', '');
+  });
+  document.addEventListener('click', (e) => {
+    if (!colsMenu.hasAttribute('hidden') && !colsMenu.contains(e.target) && e.target !== colsDropdownBtn) {
+      colsMenu.setAttribute('hidden', '');
+    }
+  });
+}
+if (colsShowAll) colsShowAll.addEventListener('click', () => {
+  editorState.customColumns = ALL_COLUMNS.map((c) => c[0]);
+  editorState.viewMode = 'custom';
+  const customBtn = document.querySelector('.preset-custom');
+  if (customBtn) customBtn.hidden = false;
+  $$('.view-mode').forEach((btn) => btn.classList.toggle('active', btn.getAttribute('data-view') === 'custom'));
+  renderMetadataTable();
+  buildColumnsDropdown();
+});
+if (colsHideAll) colsHideAll.addEventListener('click', () => {
+  editorState.customColumns = ['FileName'];
+  editorState.viewMode = 'custom';
+  const customBtn = document.querySelector('.preset-custom');
+  if (customBtn) customBtn.hidden = false;
+  $$('.view-mode').forEach((btn) => btn.classList.toggle('active', btn.getAttribute('data-view') === 'custom'));
+  renderMetadataTable();
+  buildColumnsDropdown();
+});
+if (colsReset) colsReset.addEventListener('click', () => {
+  editorState.customColumns = null;
+  editorState.viewMode = 'project';
+  const customBtn = document.querySelector('.preset-custom');
+  if (customBtn) customBtn.hidden = true;
+  $$('.view-mode').forEach((btn) => btn.classList.toggle('active', btn.getAttribute('data-view') === 'project'));
+  renderMetadataTable();
+  buildColumnsDropdown();
+});
+
+// Mode switcher
+function setEditorMode(mode) {
+  editorState.mode = mode;
+  $$('.editor-mode-pill').forEach((btn) => btn.classList.toggle('active', btn.getAttribute('data-mode') === mode));
+  $$('.editor-screen').forEach((screen) => screen.classList.toggle('active', screen.getAttribute('data-screen') === mode));
+  if (mode === 'inspect' && editorState.selectedIndex >= 0) loadFullMetadataForSelected(false);
+  updateApplyCount();
+}
+$$('.editor-mode-pill').forEach((btn) => btn.addEventListener('click', () => setEditorMode(btn.getAttribute('data-mode'))));
+if (backToBrowseBtn) backToBrowseBtn.addEventListener('click', () => setEditorMode('browse'));
+
+// Preview rail buttons
+if (railInspectBtn) railInspectBtn.addEventListener('click', () => setEditorMode('inspect'));
+if (railEditBtn) railEditBtn.addEventListener('click', () => {
+  const row = editorState.rows[editorState.selectedIndex];
+  if (!row) { editorLog('Select an image first.'); return; }
+  editorState.checkedFiles.clear();
+  editorState.checkedFiles.add(row.FilePath);
+  updateEditorSummary();
+  setEditorMode('edit');
+});
+if (railCollapseBtn) railCollapseBtn.addEventListener('click', () => {
+  if (browseGrid) browseGrid.classList.add('collapsed');
+  if (railShowBtn) railShowBtn.hidden = false;
+});
+if (railShowBtn) railShowBtn.addEventListener('click', () => {
+  if (browseGrid) browseGrid.classList.remove('collapsed');
+  railShowBtn.hidden = true;
+});
+
+// Inspect prev/next
+if (inspectPrevBtn) inspectPrevBtn.addEventListener('click', () => {
+  if (!editorState.rows.length) return;
+  const next = Math.max(0, editorState.selectedIndex - 1);
+  selectEditorRow(next);
+});
+if (inspectNextBtn) inspectNextBtn.addEventListener('click', () => {
+  if (!editorState.rows.length) return;
+  const next = Math.min(editorState.rows.length - 1, editorState.selectedIndex + 1);
+  if (editorState.selectedIndex < 0) selectEditorRow(0);
+  else selectEditorRow(next);
+});
+
+// Keyboard shortcuts: B / E / I
+document.addEventListener('keydown', (e) => {
+  const tag = (e.target?.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (!editorTab.classList.contains('active')) return;
+  const k = e.key.toLowerCase();
+  if (k === 'b') setEditorMode('browse');
+  else if (k === 'e') setEditorMode('edit');
+  else if (k === 'i') setEditorMode('inspect');
 });
 
 renderMetadataTable();
