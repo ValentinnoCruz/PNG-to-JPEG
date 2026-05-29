@@ -391,3 +391,143 @@ p { margin: 0; }
   .horizontal-tools { grid-template-columns: 1fr; }
   .settings-two-column { grid-template-columns: 1fr; }
 }
+
+/* ====================================================================
+   v4.7 — Two-pane workbench layout for the Converter tab
+   ==================================================================== */
+.converter-workbench {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.workbench-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 12px;
+}
+.workbench-rail .rail-section { display: flex; flex-direction: column; gap: 8px; }
+.workbench-rail h3 {
+  margin: 0 0 4px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.rail-step {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  background: var(--panel-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+.rail-step:hover { background: var(--panel-3); border-color: var(--border); }
+.rail-step:active { transform: translateY(1px); }
+.rail-step .step-num {
+  width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: var(--panel-3);
+  border: 1px solid var(--border);
+  font-weight: 700;
+  color: var(--muted);
+}
+.rail-step .step-label { display: flex; flex-direction: column; line-height: 1.15; }
+.rail-step .step-label b { font-size: 13px; font-weight: 600; }
+.rail-step .step-label small { color: var(--muted); font-size: 11px; }
+.rail-step .step-state {
+  font-size: 14px;
+  color: var(--muted);
+  width: 18px; text-align: center;
+}
+.rail-step.active {
+  background: linear-gradient(135deg, rgba(47,128,237,0.18), rgba(47,128,237,0.06));
+  border-color: var(--blue);
+}
+.rail-step.active .step-num {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+.rail-step.complete .step-state { color: var(--green); }
+
+.rail-tools .status-box { font-size: 12px; padding: 8px 10px; }
+.rail-full-btn { width: 100%; margin-top: 4px; }
+
+.workbench-canvas {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 14px;
+  min-width: 0;
+}
+
+.job-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.job-summary .summary-cell {
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 0;
+}
+.job-summary .summary-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.job-summary .summary-value {
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.job-summary .summary-value b { color: var(--blue); font-weight: 600; }
+.job-summary .summary-cell.fulfilled .summary-value { color: var(--green); }
+
+.workbench-stage { display: block; min-width: 0; }
+.workbench-panel { display: none; }
+.workbench-panel.active { display: block; }
+.workbench-panel.panel { padding: 18px; }
+.workbench-panel .large-drop { padding: 28px 16px; }
+.workbench-panel .drop-title { font-size: 15px; margin: 0 0 4px; }
+
+.log-dock {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.log-dock .progress-bar { margin: 0; }
+.log-dock .panel-header { padding: 0; border: none; }
+.log-dock .log { max-height: 200px; }
+
+@media (max-width: 1180px) {
+  .converter-workbench { grid-template-columns: 1fr; }
+  .workbench-rail { position: static; flex-direction: row; flex-wrap: wrap; }
+  .workbench-rail .rail-section { flex: 1 1 220px; }
+  .job-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

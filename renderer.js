@@ -194,17 +194,59 @@ function setActiveTab(tabName) {
 convertTabBtn.addEventListener('click', () => setActiveTab('convert'));
 editorTabBtn.addEventListener('click', () => setActiveTab('editor'));
 
-$$('.step-link').forEach((button) => {
+$$('.rail-step').forEach((button) => {
   button.addEventListener('click', () => {
-    $$('.step-link').forEach((btn) => btn.classList.toggle('active', btn === button));
-    const target = $(button.getAttribute('data-target'));
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      target.classList.add('focus-pulse');
-      setTimeout(() => target.classList.remove('focus-pulse'), 900);
-    }
+    const targetId = button.getAttribute('data-target');
+    $$('.rail-step').forEach((btn) => btn.classList.toggle('active', btn === button));
+    $$('.workbench-panel').forEach((panel) => {
+      panel.classList.toggle('active', panel.id === targetId);
+    });
   });
 });
+
+function updateJobSummary() {
+  const summaryInputEl = $('summaryInput');
+  const summaryTemplateEl = $('summaryTemplate');
+  const summaryOutputEl = $('summaryOutput');
+  const summaryQualityEl = $('summaryQuality');
+  const summaryChromaEl = $('summaryChroma');
+  const summaryExifEl = $('summaryExif');
+  if (!summaryInputEl) return;
+
+  const fileCount = state.files.length;
+  summaryInputEl.textContent = fileCount ? `${fileCount} PNG${fileCount === 1 ? '' : 's'}` : '0 PNGs';
+  summaryInputEl.parentElement.classList.toggle('fulfilled', fileCount > 0);
+
+  const tmpl = state.templateFile ? state.templateFile.split(/[\\/]/).pop() : '';
+  summaryTemplateEl.textContent = tmpl || 'Not set';
+  summaryTemplateEl.parentElement.classList.toggle('fulfilled', !!tmpl);
+
+  const out = state.outputDir ? state.outputDir.split(/[\\/]/).pop() : '';
+  summaryOutputEl.textContent = out || 'Not set';
+  summaryOutputEl.parentElement.classList.toggle('fulfilled', !!out);
+
+  if (qualityInput) summaryQualityEl.textContent = qualityInput.value;
+  if (samplingInput) summaryChromaEl.textContent = samplingInput.value;
+  if (syncExifDatesInput) summaryExifEl.textContent = syncExifDatesInput.checked ? 'On' : 'Off';
+
+  // Rail step completion markers
+  const railInput = $('railStateInput');
+  const railTemplate = $('railStateTemplate');
+  const railSettings = $('railStateSettings');
+  if (railInput) {
+    railInput.textContent = fileCount > 0 ? '✓' : '○';
+    railInput.parentElement.classList.toggle('complete', fileCount > 0);
+  }
+  if (railTemplate) {
+    railTemplate.textContent = tmpl ? '✓' : '○';
+    railTemplate.parentElement.classList.toggle('complete', !!tmpl);
+  }
+  if (railSettings) {
+    const settingsReady = !!state.outputDir;
+    railSettings.textContent = settingsReady ? '✓' : '○';
+    railSettings.parentElement.classList.toggle('complete', settingsReady);
+  }
+}
 
 function setStatus(element, ok, text) {
   element.className = `status-box ${ok ? 'ok' : 'bad'}`;
@@ -235,15 +277,18 @@ function updateInputSummary() {
     ? `${state.files.length} PNG file(s) selected${state.sourceRoot ? ` from ${state.sourceRoot}` : ''}.`
     : 'No PNG files selected.';
   inputSummary.className = state.files.length ? 'summary' : 'summary muted';
+  updateJobSummary();
 }
 
 function updateOutputSummary() {
   outputSummary.value = state.outputDir || 'No output folder selected.';
+  updateJobSummary();
 }
 
 function updateTemplateSummary() {
   templateSummary.textContent = state.templateFile || 'No template JPEG selected.';
   templateSummary.className = state.templateFile ? 'summary' : 'summary muted';
+  updateJobSummary();
 }
 
 function updateEditorSummary() {
@@ -515,7 +560,10 @@ qualityInput.addEventListener('input', () => {
   qualityValue.textContent = qualityInput.value;
   const heroQuality = $('heroQualityValue');
   if (heroQuality) heroQuality.textContent = qualityInput.value;
+  updateJobSummary();
 });
+samplingInput.addEventListener('change', updateJobSummary);
+syncExifDatesInput.addEventListener('change', updateJobSummary);
 clearConvertLogBtn.addEventListener('click', () => { logOutput.textContent = ''; });
 
 checkToolsBtn.addEventListener('click', async () => {

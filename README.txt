@@ -1,19 +1,16 @@
-Image Metadata Manager v4.6
+Image Metadata Manager v4.7
 ===========================
 
 Offline Windows/Electron QA utility for converting PNG images into JPEG images while emulating the current real JPEG metadata format used by the project. It also includes a cleaner metadata viewer/editor with selective bulk editing.
 
-What v4.6 adds:
-- Redesigned dark/slate UI for both the PNG to JPEG converter and Metadata Viewer / Editor.
-- Simplified PNG to JPEG converter layout with fewer panels and less visual clutter.
-- Removed the duplicate Preview placeholder box in the selected image panel.
-- Metadata viewer defaults to Project Fields instead of showing everything at once.
-- Full metadata is still available through the All Metadata panel with group filters.
-- Users can view metadata by mode: Project Fields, Camera/EXIF, Technical, or All Metadata Summary.
-- Users can select multiple images and bulk edit only the checked fields.
-- Unchecked fields remain untouched during bulk edits.
-- Timestamp placeholder now matches the current JPEG reference format: YYYY:MM:DD HH:MM:SS.mmm-0500.
-- Converter syncs EXIF DateTimeOriginal/CreateDate/ModifyDate from the PNG/project Timestamp by default so template dates do not conflict.
+What v4.7 adds:
+- Redesigned PNG to JPEG Converter as a two-pane workbench layout.
+- Left rail: numbered step navigation (Input → Template → Settings → Convert) with live completion ticks plus pinned ImageMagick / ExifTool / Config status and a Check Tools button.
+- Right canvas: persistent Job Summary header showing Input count, Template, Output folder, and current Quality / Chroma / EXIF-sync settings at a glance — visible from every step.
+- One active step panel at a time keeps the working area focused; switching steps no longer requires scrolling.
+- Dedicated log dock at the bottom of the canvas with the progress bar and conversion log.
+- Responsive collapse below ~1180px wraps the rail above the canvas.
+- All converter behaviour, IPC handlers, and Metadata Viewer / Editor functionality are unchanged.
 
 Required tools:
 - Node.js for development/building

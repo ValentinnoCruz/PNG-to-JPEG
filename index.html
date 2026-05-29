@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Image Metadata Manager v4.6</title>
+  <title>Image Metadata Manager v4.7</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-icon">▣</span><span>Image Metadata Manager v4.6</span></div>
+      <div class="brand"><span class="brand-icon">▣</span><span>Image Metadata Manager v4.7</span></div>
       <nav class="top-tabs">
         <button id="convertTabBtn" class="top-tab active">PNG to JPEG Converter</button>
         <button id="editorTabBtn" class="top-tab">Metadata Viewer / Editor</button>
@@ -18,48 +18,88 @@
     </header>
 
     <section id="convertTab" class="tab-panel active">
-      <div class="converter-simple">
-        <section class="converter-hero panel">
-          <div>
-            <h1>PNG to JPEG Converter</h1>
-            <p class="muted">Convert PNG images to JPEG while copying a real JPEG metadata template and writing project fields as XMP.</p>
+      <div class="converter-workbench">
+        <aside class="workbench-rail">
+          <div class="rail-section">
+            <h3>Steps</h3>
+            <button class="rail-step active" data-target="inputPanel">
+              <span class="step-num">1</span>
+              <span class="step-label"><b>Input</b><small>PNG files / folder</small></span>
+              <span class="step-state" id="railStateInput" aria-label="step status">○</span>
+            </button>
+            <button class="rail-step" data-target="templatePanel">
+              <span class="step-num">2</span>
+              <span class="step-label"><b>Template</b><small>JPEG metadata shell</small></span>
+              <span class="step-state" id="railStateTemplate" aria-label="step status">○</span>
+            </button>
+            <button class="rail-step" data-target="settingsPanelConvert">
+              <span class="step-num">3</span>
+              <span class="step-label"><b>Settings</b><small>Quality &amp; output</small></span>
+              <span class="step-state" id="railStateSettings" aria-label="step status">○</span>
+            </button>
+            <button class="rail-step" data-target="convertPanel">
+              <span class="step-num">4</span>
+              <span class="step-label"><b>Convert</b><small>Run job</small></span>
+              <span class="step-state" id="railStateConvert" aria-label="step status">○</span>
+            </button>
           </div>
-          <div class="hero-status">
-            <span class="status-chip">Quality <b id="heroQualityValue">95</b></span>
-            <span class="status-chip">Chroma <b>4:2:0</b></span>
-            <span class="status-chip">EXIF date sync <b>On</b></span>
+          <div class="rail-section rail-tools">
+            <h3>Tool Status</h3>
+            <div id="magickStatus" class="status-box neutral">ImageMagick: Not checked</div>
+            <div id="exiftoolStatus" class="status-box neutral">ExifTool: Not checked</div>
+            <div id="configStatus" class="status-box neutral">Config: Not checked</div>
+            <button id="checkToolsBtn" class="ghost rail-full-btn">Check Tools</button>
           </div>
-        </section>
+        </aside>
 
-        <section class="converter-main-grid">
-          <section id="inputPanel" class="panel convert-card main-card scroll-target">
-            <div class="panel-header stacked-header">
-              <div>
-                <span class="step-pill">Step 1</span>
-                <h2>Select PNG Input</h2>
-              </div>
-              <div class="compact-toggle-row">
-                <label><input type="radio" name="inputMode" checked /> Files</label>
-                <label><input type="radio" name="inputMode" /> Folder</label>
-              </div>
+        <section class="workbench-canvas">
+          <header class="job-summary panel">
+            <div class="summary-cell">
+              <span class="summary-label">Input</span>
+              <span class="summary-value" id="summaryInput">0 PNGs</span>
             </div>
-            <div class="drop-zone simple-drop">
-              <p>Drag & drop PNG files here</p>
-              <p class="muted">or choose files/folder manually</p>
-              <div class="button-row centered">
-                <button id="selectFilesBtn">Browse Files</button>
-                <button id="selectFolderBtn">Browse Folder</button>
-              </div>
+            <div class="summary-cell">
+              <span class="summary-label">Template</span>
+              <span class="summary-value" id="summaryTemplate">Not set</span>
             </div>
-            <div class="compact-options-row">
-              <label class="check-label"><input id="recursiveInput" type="checkbox" checked /> Include subfolders</label>
-              <label class="check-label"><input id="preserveFoldersInput" type="checkbox" checked /> Preserve folders</label>
+            <div class="summary-cell">
+              <span class="summary-label">Output</span>
+              <span class="summary-value" id="summaryOutput">Not set</span>
             </div>
-            <div id="inputSummary" class="summary muted">No PNG files selected.</div>
-          </section>
+            <div class="summary-cell summary-cell-settings">
+              <span class="summary-label">Settings</span>
+              <span class="summary-value">Q<b id="summaryQuality">95</b> · <b id="summaryChroma">4:2:0</b> · EXIF sync <b id="summaryExif">On</b></span>
+            </div>
+          </header>
 
-          <aside class="converter-side-stack">
-            <section id="templatePanel" class="panel convert-card scroll-target">
+          <section class="workbench-stage">
+            <article id="inputPanel" class="workbench-panel panel active">
+              <div class="panel-header stacked-header">
+                <div>
+                  <span class="step-pill">Step 1</span>
+                  <h2>Select PNG Input</h2>
+                </div>
+                <div class="compact-toggle-row">
+                  <label><input type="radio" name="inputMode" checked /> Files</label>
+                  <label><input type="radio" name="inputMode" /> Folder</label>
+                </div>
+              </div>
+              <div class="drop-zone simple-drop large-drop">
+                <p class="drop-title">Drag &amp; drop PNG files here</p>
+                <p class="muted">or choose files/folder manually</p>
+                <div class="button-row centered">
+                  <button id="selectFilesBtn">Browse Files</button>
+                  <button id="selectFolderBtn">Browse Folder</button>
+                </div>
+              </div>
+              <div class="compact-options-row">
+                <label class="check-label"><input id="recursiveInput" type="checkbox" checked /> Include subfolders</label>
+                <label class="check-label"><input id="preserveFoldersInput" type="checkbox" checked /> Preserve folders</label>
+              </div>
+              <div id="inputSummary" class="summary muted">No PNG files selected.</div>
+            </article>
+
+            <article id="templatePanel" class="workbench-panel panel">
               <div class="panel-header stacked-header">
                 <div>
                   <span class="step-pill">Step 2</span>
@@ -72,9 +112,9 @@
                 <button id="clearTemplateBtn">Clear</button>
               </div>
               <div id="templateSummary" class="summary muted">No template JPEG selected.</div>
-            </section>
+            </article>
 
-            <section id="settingsPanelConvert" class="panel convert-card scroll-target">
+            <article id="settingsPanelConvert" class="workbench-panel panel">
               <div class="panel-header stacked-header">
                 <div>
                   <span class="step-pill">Step 3</span>
@@ -99,32 +139,28 @@
               </div>
               <label class="full-label tiny-hidden">Required project metadata fields<textarea id="verifyTagsInput" rows="3">Timestamp, Location-index, CameraType, ImagingDevice, CameraTableLocation, BaselineHeight, Ptz, PtzParameters, RoomCoordinates, Location</textarea></label>
               <div class="output-row"><input id="outputSummary" class="output-summary" readonly value="No output folder selected." /><button id="selectOutputBtn">Browse Output</button></div>
-            </section>
-          </aside>
-        </section>
+            </article>
 
-        <section id="convertPanel" class="panel convert-action-card scroll-target">
-          <div class="convert-action-left">
-            <span class="step-pill">Step 4</span>
-            <h2>Convert</h2>
-            <p class="muted">Recommended: Quality 95, Chroma 4:2:0, EXIF date sync on.</p>
-            <div class="ready-box compact-ready"><b>Ready status</b><span id="progressText">Idle</span></div>
-          </div>
-          <div class="convert-action-buttons">
-            <button id="convertBtn" class="primary large">▶ Convert Now</button>
-            <button id="checkToolsBtn">Check Tools</button>
-          </div>
-          <div class="tool-grid compact horizontal-tools">
-            <div id="magickStatus" class="status-box neutral">ImageMagick: Not checked</div>
-            <div id="exiftoolStatus" class="status-box neutral">ExifTool: Not checked</div>
-            <div id="configStatus" class="status-box neutral">Config: Not checked</div>
-          </div>
-        </section>
+            <article id="convertPanel" class="workbench-panel panel">
+              <div class="panel-header stacked-header">
+                <div>
+                  <span class="step-pill">Step 4</span>
+                  <h2>Convert</h2>
+                </div>
+              </div>
+              <p class="muted">Recommended: Quality 95, Chroma 4:2:0, EXIF date sync on.</p>
+              <div class="ready-box compact-ready"><b>Ready status</b><span id="progressText">Idle</span></div>
+              <div class="button-row convert-action-buttons">
+                <button id="convertBtn" class="primary large">▶ Convert Now</button>
+              </div>
+            </article>
+          </section>
 
-        <section class="panel log-panel compact-log-panel">
-          <div class="progress-bar"><div id="progressFill"></div></div>
-          <div class="panel-header"><h2>Conversion Log</h2><button id="clearConvertLogBtn" class="ghost">Clear Log</button></div>
-          <pre id="logOutput" class="log">Ready. Add PNG files, select template, and click Convert Now.</pre>
+          <section class="log-dock panel">
+            <div class="progress-bar"><div id="progressFill"></div></div>
+            <div class="panel-header"><h2>Conversion Log</h2><button id="clearConvertLogBtn" class="ghost">Clear Log</button></div>
+            <pre id="logOutput" class="log">Ready. Add PNG files, select template, and click Convert Now.</pre>
+          </section>
         </section>
       </div>
     </section>
