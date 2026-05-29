@@ -3,7 +3,7 @@ const path = require('path');
 const fsp = require('fs/promises');
 const { spawn, spawnSync } = require('child_process');
 
-const APP_ID = 'com.valcruz.pngjpegmetadata.v4_3';
+const APP_ID = 'com.valcruz.pngjpegmetadata.v4_4';
 app.setAppUserModelId(APP_ID);
 
 const DEFAULT_PROJECT_TAGS = [
@@ -55,10 +55,10 @@ let resolvedExifTool = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1220,
-    height: 900,
-    minWidth: 1000,
-    minHeight: 720,
+    width: 1480,
+    height: 980,
+    minWidth: 1180,
+    minHeight: 760,
     autoHideMenuBar: true,
     icon: path.join(__dirname, 'assets', 'icon.ico'),
     webPreferences: {
@@ -267,13 +267,26 @@ function requestedTagList(raw) {
   return [...new Set(tags)];
 }
 
+function normalizeProjectTimestampForJpeg(value) {
+  const text = normalizeMetadataValue(value);
+  if (!text) return '';
+
+  // Reference JPEG project timestamp format observed in current images:
+  // YYYY:MM:DD HH:MM:SS.mmm-0500 or YYYY:MM:DD HH:MM:SS.mmm+0000
+  const match = text.match(/^(\d{4})[-:](\d{2})[-:](\d{2})[T\s](\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[+-]\d{4}|Z)?)/);
+  if (!match) return text;
+  const [, year, month, day, timeRest] = match;
+  return `${year}:${month}:${day} ${timeRest}`;
+}
+
 function extractProjectMetadata(sourceMeta, requestedTags) {
   const projectMetadata = {};
   const missingFromSource = [];
 
   for (const tag of requestedTags) {
     const value = sourceMeta[tag];
-    const normalized = normalizeMetadataValue(value);
+    let normalized = normalizeMetadataValue(value);
+    if (tag === 'Timestamp') normalized = normalizeProjectTimestampForJpeg(normalized);
     if (normalized) {
       projectMetadata[tag] = normalized;
     } else {
@@ -658,6 +671,17 @@ ipcMain.handle('read-image-metadata', async (_, files) => {
   return { rows: buildEditorRows(rows), errors };
 });
 
+
+ipcMain.handle('read-full-metadata', async (_, file) => {
+  const depCheck = resolveTool('exiftool', ['-ver']);
+  if (!depCheck.ok) throw new Error('ExifTool is missing. Install ExifTool or place exiftool.exe in the app tools folder.');
+  resolvedExifTool = depCheck.command;
+
+  if (!file || !isImage(file)) throw new Error('Select a PNG/JPEG image file first.');
+  const text = await getMetadataText(file);
+  return { file, text };
+});
+
 ipcMain.handle('apply-metadata-edits', async (_, payload) => {
   const depCheck = resolveTool('exiftool', ['-ver']);
   if (!depCheck.ok) throw new Error('ExifTool is missing. Install ExifTool or place exiftool.exe in the app tools folder.');
@@ -673,7 +697,8 @@ ipcMain.handle('apply-metadata-edits', async (_, payload) => {
   const advancedEdits = {};
 
   for (const tag of DEFAULT_PROJECT_TAGS) {
-    const value = normalizeMetadataValue(rawProjectEdits[tag]);
+    let value = normalizeMetadataValue(rawProjectEdits[tag]);
+    if (tag === 'Timestamp') value = normalizeProjectTimestampForJpeg(value);
     if (value) projectEdits[tag] = value;
   }
 
@@ -1013,7 +1038,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
 
   const summaryPath = path.join(reportDir, 'summary.txt');
   await fsp.writeFile(summaryPath, [
-    'PNG to JPEG Metadata Converter v4.3 - Summary',
+    'PNG to JPEG Metadata Converter v4.4 - Summary',
     `Started: ${startedAt.toString()}`,
     `Finished: ${new Date().toString()}`,
     `Total PNG files: ${files.length}`,
@@ -1025,7 +1050,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
     `Report CSV: ${reportPath}`,
     `Metadata dumps: ${dumpsDir}`,
     '',
-    'What v4.3 verifies:',
+    'What v4.4 verifies:',
     '1. JPEG dimensions match the source PNG.',
     '2. Standard metadata copy is attempted using ExifTool.',
     '3. If a template JPEG is selected, its EXIF/JFIF/XMP/ICC metadata shell is copied to the output JPEG first.',
@@ -1037,7 +1062,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
     'Target project fields based on the current JPEG metadata sample:',
     DEFAULT_PROJECT_TAGS.map((tag) => `- ${tag}`).join('\n'),
     '',
-    'v4.3 metadata editor also includes advanced EXIF/template fields behind an Advanced panel:',
+    'v4.4 metadata editor also includes advanced EXIF/template fields behind an Advanced panel:',
     DEFAULT_ADVANCED_TAGS.map((tag) => `- ${tag}`).join('\n'),
     '',
     'Important limitation:',
