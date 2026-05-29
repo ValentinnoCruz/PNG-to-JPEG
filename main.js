@@ -3,7 +3,7 @@ const path = require('path');
 const fsp = require('fs/promises');
 const { spawn, spawnSync } = require('child_process');
 
-const APP_ID = 'com.valcruz.pngjpegmetadata.v4_2';
+const APP_ID = 'com.valcruz.pngjpegmetadata.v4_3';
 app.setAppUserModelId(APP_ID);
 
 const DEFAULT_PROJECT_TAGS = [
@@ -18,6 +18,36 @@ const DEFAULT_PROJECT_TAGS = [
   'RoomCoordinates',
   'Location'
 ];
+
+const DEFAULT_ADVANCED_TAGS = [
+  'Make',
+  'Model',
+  'Software',
+  'ExposureTime',
+  'SerialNumber',
+  'ColorSpace',
+  'DateTimeOriginal',
+  'CreateDate',
+  'ModifyDate',
+  'XResolution',
+  'YResolution',
+  'ResolutionUnit'
+];
+
+const ADVANCED_EXIF_TAG_MAP = {
+  Make: 'EXIF:Make',
+  Model: 'EXIF:Model',
+  Software: 'EXIF:Software',
+  ExposureTime: 'EXIF:ExposureTime',
+  SerialNumber: 'EXIF:SerialNumber',
+  ColorSpace: 'EXIF:ColorSpace',
+  DateTimeOriginal: 'EXIF:DateTimeOriginal',
+  CreateDate: 'EXIF:CreateDate',
+  ModifyDate: 'EXIF:ModifyDate',
+  XResolution: 'EXIF:XResolution',
+  YResolution: 'EXIF:YResolution',
+  ResolutionUnit: 'EXIF:ResolutionUnit'
+};
 
 let mainWindow;
 let resolvedMagick = null;
@@ -405,6 +435,21 @@ function buildXmpWriteArgs(projectMetadata, configPath, destinationFile) {
   return args;
 }
 
+function buildAdvancedExifWriteArgs(advancedEdits, destinationFile) {
+  const args = ['-overwrite_original'];
+
+  for (const [field, value] of Object.entries(advancedEdits || {})) {
+    const tagName = ADVANCED_EXIF_TAG_MAP[field];
+    const normalized = normalizeMetadataValue(value);
+    if (tagName && normalized) {
+      args.push(`-${tagName}=${normalized}`);
+    }
+  }
+
+  args.push(destinationFile);
+  return args.length > 2 ? args : [];
+}
+
 function parseProjectTimestamp(value) {
   const original = normalizeMetadataValue(value);
   if (!original) return null;
@@ -450,7 +495,15 @@ function buildEditorRows(metadataRows) {
     FileName: path.basename(row.SourceFile),
     FilePath: row.SourceFile,
     FileType: normalizeMetadataValue(row.FileType),
+    MIMEType: normalizeMetadataValue(row.MIMEType),
+    ImageWidth: normalizeMetadataValue(row.ImageWidth),
+    ImageHeight: normalizeMetadataValue(row.ImageHeight),
     ImageSize: normalizeMetadataValue(row.ImageSize),
+    FileSize: normalizeMetadataValue(row.FileSize),
+    EncodingProcess: normalizeMetadataValue(row.EncodingProcess),
+    BitsPerSample: normalizeMetadataValue(row.BitsPerSample),
+    ColorComponents: normalizeMetadataValue(row.ColorComponents),
+    YCbCrSubSampling: normalizeMetadataValue(row.YCbCrSubSampling),
     Timestamp: normalizeMetadataValue(row.Timestamp),
     'Location-index': normalizeMetadataValue(row['Location-index']),
     CameraType: normalizeMetadataValue(row.CameraType),
@@ -460,7 +513,19 @@ function buildEditorRows(metadataRows) {
     Ptz: normalizeMetadataValue(row.Ptz),
     PtzParameters: normalizeMetadataValue(row.PtzParameters),
     RoomCoordinates: normalizeMetadataValue(row.RoomCoordinates),
-    Location: normalizeMetadataValue(row.Location)
+    Location: normalizeMetadataValue(row.Location),
+    Make: normalizeMetadataValue(row.Make),
+    Model: normalizeMetadataValue(row.Model),
+    Software: normalizeMetadataValue(row.Software),
+    ExposureTime: normalizeMetadataValue(row.ExposureTime),
+    SerialNumber: normalizeMetadataValue(row.SerialNumber),
+    ColorSpace: normalizeMetadataValue(row.ColorSpace),
+    DateTimeOriginal: normalizeMetadataValue(row.DateTimeOriginal),
+    CreateDate: normalizeMetadataValue(row.CreateDate),
+    ModifyDate: normalizeMetadataValue(row.ModifyDate),
+    XResolution: normalizeMetadataValue(row.XResolution),
+    YResolution: normalizeMetadataValue(row.YResolution),
+    ResolutionUnit: normalizeMetadataValue(row.ResolutionUnit)
   }));
 }
 
@@ -602,37 +667,73 @@ ipcMain.handle('apply-metadata-edits', async (_, payload) => {
   if (!configPath) throw new Error('Missing exiftool_config. This file is required to write the project XMP tags.');
 
   const files = Array.isArray(payload.files) ? payload.files.filter(isImage) : [];
-  const rawEdits = payload.edits || {};
-  const edits = {};
+  const rawProjectEdits = payload.projectEdits || payload.edits || {};
+  const rawAdvancedEdits = payload.advancedEdits || {};
+  const projectEdits = {};
+  const advancedEdits = {};
 
   for (const tag of DEFAULT_PROJECT_TAGS) {
-    const value = normalizeMetadataValue(rawEdits[tag]);
-    if (value) edits[tag] = value;
+    const value = normalizeMetadataValue(rawProjectEdits[tag]);
+    if (value) projectEdits[tag] = value;
+  }
+
+  for (const tag of DEFAULT_ADVANCED_TAGS) {
+    const value = normalizeMetadataValue(rawAdvancedEdits[tag]);
+    if (value) advancedEdits[tag] = value;
   }
 
   if (!files.length) throw new Error('No images selected for metadata editing.');
-  if (!Object.keys(edits).length) throw new Error('No non-empty metadata fields were provided.');
+  if (!Object.keys(projectEdits).length && !Object.keys(advancedEdits).length) {
+    throw new Error('No non-empty metadata fields were provided.');
+  }
 
   const rows = [];
   const reportStamp = new Date().toISOString().replace(/[:.]/g, '-');
   const reportDir = path.join(path.dirname(files[0]), `_metadata_edit_report_${reportStamp}`);
+  const backupDir = path.join(reportDir, 'backups');
   await fsp.mkdir(reportDir, { recursive: true });
+  if (payload.backupBeforeEdit !== false) await fsp.mkdir(backupDir, { recursive: true });
 
-  for (const file of files) {
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
     const row = {
       File: file,
       Status: 'Unknown',
-      FieldsUpdated: Object.keys(edits).join('; '),
+      ProjectFieldsUpdated: Object.keys(projectEdits).join('; '),
+      AdvancedFieldsUpdated: Object.keys(advancedEdits).join('; '),
+      BackupFile: '',
+      DateSyncStatus: '',
       Error: ''
     };
 
     try {
-      const args = buildXmpWriteArgs(edits, configPath, file);
-      await runCommand(resolvedExifTool, args);
+      if (payload.backupBeforeEdit !== false) {
+        const safeName = `${String(i + 1).padStart(4, '0')}_${path.basename(file)}`;
+        const backupFile = path.join(backupDir, safeName);
+        await fsp.copyFile(file, backupFile);
+        row.BackupFile = backupFile;
+      }
 
-      if (edits.Timestamp && payload.syncExifDates) {
-        const { args: dateArgs } = buildExifDateSyncArgs(edits, file);
-        if (dateArgs.length) await runCommand(resolvedExifTool, dateArgs);
+      if (Object.keys(projectEdits).length) {
+        const args = buildXmpWriteArgs(projectEdits, configPath, file);
+        await runCommand(resolvedExifTool, args);
+      }
+
+      if (Object.keys(advancedEdits).length) {
+        const args = buildAdvancedExifWriteArgs(advancedEdits, file);
+        if (args.length) await runCommand(resolvedExifTool, args);
+      }
+
+      if (projectEdits.Timestamp && payload.syncExifDates) {
+        const { args: dateArgs, parsed } = buildExifDateSyncArgs(projectEdits, file);
+        if (parsed && dateArgs.length) {
+          await runCommand(resolvedExifTool, dateArgs);
+          row.DateSyncStatus = `EXIF date fields synced from Timestamp: ${parsed.exifDate}`;
+        } else {
+          row.DateSyncStatus = 'Timestamp was edited but could not be parsed into EXIF format';
+        }
+      } else if (projectEdits.Timestamp) {
+        row.DateSyncStatus = 'Timestamp edited; EXIF date sync skipped by user setting';
       }
 
       row.Status = 'Updated';
@@ -912,7 +1013,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
 
   const summaryPath = path.join(reportDir, 'summary.txt');
   await fsp.writeFile(summaryPath, [
-    'PNG to JPEG Metadata Converter v4.2 - Summary',
+    'PNG to JPEG Metadata Converter v4.3 - Summary',
     `Started: ${startedAt.toString()}`,
     `Finished: ${new Date().toString()}`,
     `Total PNG files: ${files.length}`,
@@ -924,7 +1025,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
     `Report CSV: ${reportPath}`,
     `Metadata dumps: ${dumpsDir}`,
     '',
-    'What v4.2 verifies:',
+    'What v4.3 verifies:',
     '1. JPEG dimensions match the source PNG.',
     '2. Standard metadata copy is attempted using ExifTool.',
     '3. If a template JPEG is selected, its EXIF/JFIF/XMP/ICC metadata shell is copied to the output JPEG first.',
@@ -933,8 +1034,11 @@ ipcMain.handle('start-conversion', async (event, options) => {
     '6. A sidecar JSON file is always created. Embedded JPEG JSON backup is optional and disabled by default for stricter real-JPEG emulation.',
     '7. The CSV reports PASS/WARNING details for template mode, date sync, individual XMP tags, and optional JSON backup preservation.',
     '',
-    'Target fields based on the current JPEG metadata sample:',
+    'Target project fields based on the current JPEG metadata sample:',
     DEFAULT_PROJECT_TAGS.map((tag) => `- ${tag}`).join('\n'),
+    '',
+    'v4.3 metadata editor also includes advanced EXIF/template fields behind an Advanced panel:',
+    DEFAULT_ADVANCED_TAGS.map((tag) => `- ${tag}`).join('\n'),
     '',
     'Important limitation:',
     'JPEG cannot store PNG transparency. Transparent pixels are flattened against the selected background color.',

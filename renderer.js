@@ -25,6 +25,34 @@ const PROJECT_TAGS = [
   'Location'
 ];
 
+const ADVANCED_TAGS = [
+  'Make',
+  'Model',
+  'Software',
+  'ExposureTime',
+  'SerialNumber',
+  'ColorSpace',
+  'DateTimeOriginal',
+  'CreateDate',
+  'ModifyDate',
+  'XResolution',
+  'YResolution',
+  'ResolutionUnit'
+];
+
+const READONLY_FIELDS = [
+  'FileType',
+  'MIMEType',
+  'ImageWidth',
+  'ImageHeight',
+  'ImageSize',
+  'FileSize',
+  'EncodingProcess',
+  'BitsPerSample',
+  'ColorComponents',
+  'YCbCrSubSampling'
+];
+
 const $ = (id) => document.getElementById(id);
 
 // Tabs
@@ -72,6 +100,8 @@ const clearEditFormBtn = $('clearEditFormBtn');
 const applySelectedBtn = $('applySelectedBtn');
 const applyAllBtn = $('applyAllBtn');
 const editorSyncExifDatesInput = $('editorSyncExifDatesInput');
+const editorBackupInput = $('editorBackupInput');
+const readOnlyMetadata = $('readOnlyMetadata');
 
 const editInputs = {
   Timestamp: $('editTimestamp'),
@@ -84,6 +114,21 @@ const editInputs = {
   PtzParameters: $('editPtzParameters'),
   RoomCoordinates: $('editRoomCoordinates'),
   Location: $('editLocation')
+};
+
+const advancedInputs = {
+  Make: $('editMake'),
+  Model: $('editModel'),
+  Software: $('editSoftware'),
+  ExposureTime: $('editExposureTime'),
+  SerialNumber: $('editSerialNumber'),
+  ColorSpace: $('editColorSpace'),
+  DateTimeOriginal: $('editDateTimeOriginal'),
+  CreateDate: $('editCreateDate'),
+  ModifyDate: $('editModifyDate'),
+  XResolution: $('editXResolution'),
+  YResolution: $('editYResolution'),
+  ResolutionUnit: $('editResolutionUnit')
 };
 
 function setActiveTab(tabName) {
@@ -162,6 +207,17 @@ function truncate(value, length = 90) {
   return text.length > length ? `${text.slice(0, length)}…` : text;
 }
 
+function renderReadOnlyMetadata(row) {
+  if (!row) {
+    readOnlyMetadata.innerHTML = 'Select an image to view technical fields.';
+    return;
+  }
+
+  readOnlyMetadata.innerHTML = READONLY_FIELDS.map((field) => `
+    <div class="readonly-item"><strong>${field}</strong>${truncate(row[field], 80) || '<span class="muted">blank/not present</span>'}</div>
+  `).join('');
+}
+
 function renderMetadataTable() {
   if (!editorState.rows.length) {
     metadataTableBody.innerHTML = '<tr><td colspan="9" class="muted">No metadata loaded.</td></tr>';
@@ -199,6 +255,12 @@ function selectEditorRow(index) {
     editInputs[tag].value = row[tag] || '';
   }
 
+  for (const tag of ADVANCED_TAGS) {
+    advancedInputs[tag].value = row[tag] || '';
+  }
+
+  renderReadOnlyMetadata(row);
+
   editorStatus.textContent = `Selected: ${row.FileName}`;
   editorStatus.className = 'summary';
   renderMetadataTable();
@@ -206,16 +268,29 @@ function selectEditorRow(index) {
 
 function clearEditForm() {
   for (const input of Object.values(editInputs)) input.value = '';
+  for (const input of Object.values(advancedInputs)) input.value = '';
   editorStatus.textContent = editorState.selectedIndex >= 0 ? `Selected image remains selected. Form cleared for bulk editing.` : 'No selected image.';
 }
 
 function getFilledEdits() {
-  const edits = {};
+  const projectEdits = {};
+  const advancedEdits = {};
+
   for (const tag of PROJECT_TAGS) {
     const value = editInputs[tag].value.trim();
-    if (value) edits[tag] = value;
+    if (value) projectEdits[tag] = value;
   }
-  return edits;
+
+  for (const tag of ADVANCED_TAGS) {
+    const value = advancedInputs[tag].value.trim();
+    if (value) advancedEdits[tag] = value;
+  }
+
+  return { projectEdits, advancedEdits };
+}
+
+function countEdits(payload) {
+  return Object.keys(payload.projectEdits).length + Object.keys(payload.advancedEdits).length;
 }
 
 async function loadEditorMetadata() {
@@ -230,6 +305,7 @@ async function loadEditorMetadata() {
     editorState.rows = result.rows || [];
     editorState.selectedIndex = -1;
     renderMetadataTable();
+    renderReadOnlyMetadata(null);
     updateEditorSummary();
     editorStatus.textContent = 'Metadata loaded. Click a row to edit one image, or fill fields manually for bulk editing.';
     editorStatus.className = 'summary';
@@ -380,6 +456,7 @@ selectEditorFilesBtn.addEventListener('click', async () => {
     editorState.selectedIndex = -1;
     updateEditorSummary();
     renderMetadataTable();
+renderReadOnlyMetadata(null);
     editorLog(`Selected ${editorState.files.length} image(s). Loading metadata...`);
     await loadEditorMetadata();
   }
@@ -394,6 +471,7 @@ selectEditorFolderBtn.addEventListener('click', async () => {
     editorState.selectedIndex = -1;
     updateEditorSummary();
     renderMetadataTable();
+renderReadOnlyMetadata(null);
     editorLog(`Selected folder. Found ${editorState.files.length} image(s). Loading metadata...`);
     await loadEditorMetadata();
   }
@@ -410,7 +488,7 @@ applySelectedBtn.addEventListener('click', async () => {
   }
 
   const edits = getFilledEdits();
-  if (!Object.keys(edits).length) {
+  if (!countEdits(edits)) {
     editorLog('No filled fields to apply.');
     return;
   }
@@ -419,8 +497,10 @@ applySelectedBtn.addEventListener('click', async () => {
   try {
     const result = await window.converterApi.applyMetadataEdits({
       files: [selected.FilePath],
-      edits,
-      syncExifDates: editorSyncExifDatesInput.checked
+      projectEdits: edits.projectEdits,
+      advancedEdits: edits.advancedEdits,
+      syncExifDates: editorSyncExifDatesInput.checked,
+      backupBeforeEdit: editorBackupInput.checked
     });
     editorLog(`Updated selected image. Report: ${result.reportPath}`);
     await loadEditorMetadata();
@@ -438,12 +518,12 @@ applyAllBtn.addEventListener('click', async () => {
   }
 
   const edits = getFilledEdits();
-  if (!Object.keys(edits).length) {
+  if (!countEdits(edits)) {
     editorLog('No filled fields to apply.');
     return;
   }
 
-  const fieldList = Object.keys(edits).join(', ');
+  const fieldList = [...Object.keys(edits.projectEdits), ...Object.keys(edits.advancedEdits).map((field) => `Advanced: ${field}`)].join(', ');
   const confirmed = confirm(`Apply these filled field(s) to all ${editorState.files.length} loaded image(s)?\n\n${fieldList}`);
   if (!confirmed) return;
 
@@ -451,8 +531,10 @@ applyAllBtn.addEventListener('click', async () => {
   try {
     const result = await window.converterApi.applyMetadataEdits({
       files: editorState.files,
-      edits,
-      syncExifDates: editorSyncExifDatesInput.checked
+      projectEdits: edits.projectEdits,
+      advancedEdits: edits.advancedEdits,
+      syncExifDates: editorSyncExifDatesInput.checked,
+      backupBeforeEdit: editorBackupInput.checked
     });
     editorLog(`Bulk update complete. Report: ${result.reportPath}`);
     await loadEditorMetadata();
@@ -464,3 +546,4 @@ applyAllBtn.addEventListener('click', async () => {
 });
 
 renderMetadataTable();
+renderReadOnlyMetadata(null);
