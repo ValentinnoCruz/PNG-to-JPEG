@@ -1,16 +1,18 @@
-PNG to JPEG Metadata Converter v4.3
-===================================
+Image Metadata Manager v4.4
+===========================
 
-This is an offline Windows/Electron QA utility for converting PNG images into JPEG images while emulating the current real JPEG metadata format used by the project. It also includes a safer metadata viewer/bulk editor.
+Offline Windows/Electron QA utility for converting PNG images into JPEG images while emulating the current real JPEG metadata format used by the project. It also includes a cleaner metadata viewer/editor with selective bulk editing.
 
-What v4.3 adds:
-- Converter tab still converts PNG to JPEG using a real JPEG metadata template.
-- Converter syncs EXIF DateTimeOriginal/CreateDate/ModifyDate from the PNG/project Timestamp by default so template dates do not conflict with image-specific XMP Timestamp.
-- Metadata Viewer / Bulk Editor tab now separates fields into safe project fields, advanced EXIF/template fields, and read-only technical fields.
-- Standard editor can update project metadata fields as individual XMP-Sprout tags.
-- Advanced editor can update selected EXIF/template fields when closer real-JPEG emulation is needed.
-- Read-only technical fields are visible but not editable.
-- Bulk edits can create backup copies before changes are applied.
+What v4.4 adds:
+- Redesigned dark/slate UI for both the PNG to JPEG converter and Metadata Viewer / Editor.
+- Cleaner converter workflow: Select Input, Template JPEG, Output Settings, Convert.
+- Metadata viewer defaults to Project Fields instead of showing everything at once.
+- Full metadata is still available through the All Metadata panel with group filters.
+- Users can view metadata by mode: Project Fields, Camera/EXIF, Technical, or All Metadata Summary.
+- Users can select multiple images and bulk edit only the checked fields.
+- Unchecked fields remain untouched during bulk edits.
+- Timestamp placeholder now matches the current JPEG reference format: YYYY:MM:DD HH:MM:SS.mmm-0500.
+- Converter syncs EXIF DateTimeOriginal/CreateDate/ModifyDate from the PNG/project Timestamp by default so template dates do not conflict.
 
 Required tools:
 - Node.js for development/building
@@ -63,21 +65,11 @@ Advanced EXIF/template fields:
 - YResolution
 - ResolutionUnit
 
-Read-only technical fields:
-- FileType
-- MIMEType
-- ImageWidth
-- ImageHeight
-- ImageSize
-- FileSize
-- EncodingProcess
-- BitsPerSample
-- ColorComponents
-- YCbCrSubSampling
-
 Important notes:
 - The converter writes project fields as individual XMP-Sprout tags to match the current JPEG workflow.
 - The editor writes project fields as XMP-Sprout tags.
-- The advanced editor is intended only for controlled metadata emulation. Leave advanced fields blank if you do not want to change them.
+- In the editor, checkboxes control which fields get written. Placeholder text is only an example and is not written unless the field is checked and filled.
+- Bulk edits modify only checked fields; all other metadata remains untouched.
+- The advanced editor is intended only for controlled metadata emulation. Leave advanced fields unchecked if you do not want to change them.
 - JPEG cannot preserve PNG transparency. Transparent pixels are flattened against the selected background color.
 - Keep the exiftool_config file. It is required for custom XMP tag writing.

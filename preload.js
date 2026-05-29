@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('converterApi', {
   selectImageFiles: () => ipcRenderer.invoke('select-image-files'),
   selectImageFolder: (recursive) => ipcRenderer.invoke('select-image-folder', recursive),
   readImageMetadata: (files) => ipcRenderer.invoke('read-image-metadata', files),
+  readFullMetadata: (file) => ipcRenderer.invoke('read-full-metadata', file),
   applyMetadataEdits: (payload) => ipcRenderer.invoke('apply-metadata-edits', payload),
 
   onProgress: (callback) => {

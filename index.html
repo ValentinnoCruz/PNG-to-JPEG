@@ -3,222 +3,216 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PNG to JPEG Metadata Converter v4.3</title>
+  <title>Image Metadata Manager v4.4</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="app-shell">
-    <section class="hero">
-      <div>
-        <p class="eyebrow">Offline QA Utility · v4.3</p>
-        <h1>PNG to JPEG Metadata Utility</h1>
-        <p class="subtitle">Convert PNGs into JPEGs that emulate the current real metadata structure, or safely view/edit project and advanced metadata in bulk.</p>
-      </div>
-      <div class="hero-badge">PNG → JPG<br><span>VIEW + EDIT XMP</span></div>
-    </section>
-
-    <section class="tab-bar">
-      <button id="convertTabBtn" class="tab-button active">PNG → JPEG Converter</button>
-      <button id="editorTabBtn" class="tab-button">Metadata Viewer / Bulk Editor</button>
-    </section>
+    <header class="topbar">
+      <div class="brand"><span class="brand-icon">▣</span><span>Image Metadata Manager v4.4</span></div>
+      <nav class="top-tabs">
+        <button id="convertTabBtn" class="top-tab active">PNG to JPEG Converter</button>
+        <button id="editorTabBtn" class="top-tab">Metadata Viewer / Editor</button>
+      </nav>
+      <div class="top-actions"><span>⚙ Settings</span><span>? Help</span><span>ⓘ About</span></div>
+    </header>
 
     <section id="convertTab" class="tab-panel active">
-      <section class="card notice-card">
-        <h2>Converter mode</h2>
-        <p>v4.3 uses a real JPEG as the metadata template, overwrites project fields with values from the PNG, and syncs EXIF date fields from the PNG/project timestamp by default so the dates do not conflict.</p>
-      </section>
+      <div class="converter-layout">
+        <aside class="step-sidebar">
+          <button class="step-link active"><span>1</span><b>Select Input</b><small>Choose PNG files or folder</small></button>
+          <button class="step-link"><span>2</span><b>Template JPEG</b><small>Choose reference JPEG</small></button>
+          <button class="step-link"><span>3</span><b>Output Settings</b><small>Set output options</small></button>
+          <button class="step-link"><span>4</span><b>Convert</b><small>Start conversion</small></button>
+        </aside>
 
-      <section class="card">
-        <div class="card-header">
-          <div>
-            <h2>1. Check required tools</h2>
-            <p>Uses ImageMagick for conversion and ExifTool for metadata extraction, XMP writing, and verification.</p>
+        <section class="convert-workspace">
+          <div class="convert-grid">
+            <section class="panel input-panel">
+              <div class="panel-header"><h2>1. Select PNG Input</h2></div>
+              <div class="inline-options">
+                <label><input type="radio" name="inputMode" checked /> Files</label>
+                <label><input type="radio" name="inputMode" /> Folder</label>
+                <label class="check-label"><input id="recursiveInput" type="checkbox" checked /> Include subfolders</label>
+                <label class="check-label"><input id="preserveFoldersInput" type="checkbox" checked /> Preserve folders</label>
+              </div>
+              <div class="drop-zone">
+                <p>Drag & drop PNG files here</p>
+                <p class="muted">or select files/folder below</p>
+                <div class="button-row centered">
+                  <button id="selectFilesBtn">Browse Files</button>
+                  <button id="selectFolderBtn">Browse Folder</button>
+                </div>
+              </div>
+              <div id="inputSummary" class="summary muted">No PNG files selected.</div>
+            </section>
+
+            <section class="panel template-panel">
+              <div class="panel-header"><h2>2. Template JPEG</h2></div>
+              <p class="muted">Use a current real JPEG as the metadata shell. PNG project fields overwrite matching XMP fields.</p>
+              <div class="template-preview"><div class="image-placeholder">JPEG<br>Template</div></div>
+              <div class="button-row centered">
+                <button id="selectTemplateBtn">Choose Template</button>
+                <button id="clearTemplateBtn">Clear</button>
+              </div>
+              <div id="templateSummary" class="summary muted">No template JPEG selected.</div>
+            </section>
+
+            <section class="panel settings-panel-convert">
+              <div class="panel-header"><h2>3. Output Settings</h2></div>
+              <label>Output Format <select disabled><option>JPEG (.jpg)</option></select></label>
+              <label>JPEG Quality <input id="qualityInput" type="range" min="1" max="100" value="95" /><span id="qualityValue" class="value-pill">95</span></label>
+              <label>Chroma Sampling
+                <select id="samplingInput">
+                  <option value="4:2:0" selected>4:2:0 — current JPEG sample</option>
+                  <option value="4:4:4">4:4:4 — highest color fidelity</option>
+                  <option value="4:2:2">4:2:2 — middle option</option>
+                </select>
+              </label>
+              <label>Transparency background <input id="backgroundInput" type="text" value="white" /></label>
+              <label class="check-label"><input id="syncExifDatesInput" type="checkbox" checked /> Sync EXIF date fields</label>
+              <label class="check-label"><input id="embedJsonBackupInput" type="checkbox" /> Embed JSON backup in JPEG</label>
+              <label class="full-label tiny-hidden">Required project metadata fields<textarea id="verifyTagsInput" rows="3">Timestamp, Location-index, CameraType, ImagingDevice, CameraTableLocation, BaselineHeight, Ptz, PtzParameters, RoomCoordinates, Location</textarea></label>
+              <div class="output-row"><input id="outputSummary" class="output-summary" readonly value="No output folder selected." /><button id="selectOutputBtn">Browse</button></div>
+            </section>
+
+            <section class="panel convert-panel">
+              <div class="panel-header"><h2>4. Convert</h2></div>
+              <div class="ready-box"><b>Ready when input, template, and output are selected.</b><span id="progressText">Idle</span></div>
+              <button id="convertBtn" class="primary large">▶ Convert Now</button>
+              <button id="checkToolsBtn">Check Tools</button>
+              <div class="tool-grid compact">
+                <div id="magickStatus" class="status-box neutral">ImageMagick: Not checked</div>
+                <div id="exiftoolStatus" class="status-box neutral">ExifTool: Not checked</div>
+                <div id="configStatus" class="status-box neutral">Config: Not checked</div>
+              </div>
+            </section>
           </div>
-          <button id="checkToolsBtn" class="primary">Check Tools</button>
-        </div>
-        <div class="tool-grid">
-          <div id="magickStatus" class="status-box neutral">ImageMagick: Not checked</div>
-          <div id="exiftoolStatus" class="status-box neutral">ExifTool: Not checked</div>
-          <div id="configStatus" class="status-box neutral">ExifTool Config: Not checked</div>
-        </div>
-      </section>
 
-      <section class="card">
-        <h2>2. Select PNG input</h2>
-        <div class="button-row">
-          <button id="selectFilesBtn">Select PNG Files</button>
-          <button id="selectFolderBtn">Select PNG Folder</button>
-          <label class="check-label"><input id="recursiveInput" type="checkbox" checked /> Include subfolders</label>
-          <label class="check-label"><input id="preserveFoldersInput" type="checkbox" checked /> Preserve folder structure</label>
-        </div>
-        <div id="inputSummary" class="summary muted">No PNG files selected.</div>
-      </section>
-
-      <section class="card">
-        <h2>3. Select real JPEG metadata template</h2>
-        <p class="subtitle">Recommended for accurate test emulation. The template supplies the EXIF/JFIF/XMP/ICC metadata shell. PNG project fields overwrite matching fields afterward.</p>
-        <div class="button-row">
-          <button id="selectTemplateBtn">Select Template JPEG</button>
-          <button id="clearTemplateBtn">Clear Template</button>
-        </div>
-        <div id="templateSummary" class="summary muted">No template JPEG selected. Converter will use PNG metadata only.</div>
-      </section>
-
-      <section class="card">
-        <h2>4. Select output</h2>
-        <div class="button-row">
-          <button id="selectOutputBtn">Select Output Folder</button>
-        </div>
-        <div id="outputSummary" class="summary muted">No output folder selected.</div>
-      </section>
-
-      <section class="card settings-card">
-        <h2>5. Conversion and verification settings</h2>
-        <div class="settings-grid">
-          <label>
-            JPEG Quality
-            <input id="qualityInput" type="number" min="1" max="100" value="95" />
-          </label>
-          <label>
-            Chroma sampling
-            <select id="samplingInput">
-              <option value="4:2:0" selected>4:2:0 — matches current JPEG sample</option>
-              <option value="4:4:4">4:4:4 — higher color fidelity</option>
-              <option value="4:2:2">4:2:2 — middle option</option>
-            </select>
-          </label>
-          <label>
-            Transparency background
-            <input id="backgroundInput" type="text" value="white" />
-          </label>
-        </div>
-        <label class="check-label advanced-check"><input id="syncExifDatesInput" type="checkbox" checked /> Sync EXIF date fields from PNG/project Timestamp</label>
-        <label class="check-label advanced-check"><input id="embedJsonBackupInput" type="checkbox" /> Embed JSON backup into JPEG metadata fields</label>
-        <label class="full-label">
-          Required project metadata fields
-          <textarea id="verifyTagsInput" rows="5">Timestamp, Location-index, CameraType, ImagingDevice, CameraTableLocation, BaselineHeight, Ptz, PtzParameters, RoomCoordinates, Location</textarea>
-        </label>
-        <p class="hint">Recommended: Quality 95, Chroma Sampling 4:2:0, Sync EXIF dates on, embedded JSON backup off.</p>
-      </section>
-
-      <section class="card action-card">
-        <div>
-          <h2>6. Convert and verify</h2>
-          <p>Creates JPEGs, applies the real JPEG template shell, writes PNG project fields as individual XMP tags, syncs date fields, and creates CSV/metadata reports.</p>
-        </div>
-        <button id="convertBtn" class="primary big">Start Conversion</button>
-      </section>
-
-      <section class="card progress-card">
-        <div class="progress-header">
-          <h2>Progress</h2>
-          <div id="progressText" class="muted">Idle</div>
-        </div>
-        <div class="progress-bar"><div id="progressFill"></div></div>
-        <pre id="logOutput" class="log"></pre>
-      </section>
+          <section class="panel log-panel">
+            <div class="progress-bar"><div id="progressFill"></div></div>
+            <div class="panel-header"><h2>Conversion Log</h2><button id="clearConvertLogBtn" class="ghost">Clear Log</button></div>
+            <pre id="logOutput" class="log">Ready. Add PNG files, select template, and click Convert Now.</pre>
+          </section>
+        </section>
+      </div>
     </section>
 
     <section id="editorTab" class="tab-panel">
-      <section class="card notice-card">
-        <h2>Metadata Viewer / Bulk Editor</h2>
-        <p>View image metadata, safely edit project metadata, and optionally edit advanced EXIF/template fields. Project edits are written as individual XMP-Sprout tags, matching the current JPEG workflow.</p>
-      </section>
-
-      <section class="card">
-        <h2>1. Load images</h2>
-        <div class="button-row">
-          <button id="selectEditorFilesBtn">Select Images</button>
-          <button id="selectEditorFolderBtn">Select Image Folder</button>
-          <button id="refreshMetadataBtn">Refresh Metadata</button>
-          <label class="check-label"><input id="editorRecursiveInput" type="checkbox" checked /> Include subfolders</label>
-        </div>
-        <div id="editorSummary" class="summary muted">No images loaded.</div>
-      </section>
-
-      <section class="card">
-        <div class="card-header">
-          <div>
-            <h2>2. Metadata table</h2>
-            <p>Click a row to load that image's values into the editor form.</p>
+      <div class="editor-layout">
+        <aside class="metadata-sidebar">
+          <div class="sidebar-section">
+            <h3>View Mode</h3>
+            <button class="view-mode active" data-view="project">▣ Project Fields</button>
+            <button class="view-mode" data-view="camera">▣ Camera / EXIF</button>
+            <button class="view-mode" data-view="technical">▣ Technical</button>
+            <button class="view-mode" data-view="all">☰ All Metadata Summary</button>
           </div>
-        </div>
-        <div class="table-wrap">
-          <table class="metadata-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>File</th>
-                <th>Type</th>
-                <th>Size</th>
-                <th>Timestamp</th>
-                <th>Location</th>
-                <th>CameraTableLocation</th>
-                <th>ImagingDevice</th>
-                <th>BaselineHeight</th>
-              </tr>
-            </thead>
-            <tbody id="metadataTableBody">
-              <tr><td colspan="9" class="muted">No metadata loaded.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="card settings-card">
-        <h2>3. Standard editor — safe project fields</h2>
-        <p class="hint">For bulk edits, fill only the fields you want to change, then use “Apply filled fields to all loaded images.” These are the project fields used by the image workflow.</p>
-        <div class="settings-grid editor-grid">
-          <label>Timestamp <input id="editTimestamp" type="text" placeholder="2025-02-28T11:16:11.072-0500" /></label>
-          <label>Location-index <input id="editLocationIndex" type="text" /></label>
-          <label>CameraType <input id="editCameraType" type="text" /></label>
-          <label>ImagingDevice <input id="editImagingDevice" type="text" /></label>
-          <label>CameraTableLocation <input id="editCameraTableLocation" type="text" /></label>
-          <label>BaselineHeight <input id="editBaselineHeight" type="text" /></label>
-          <label>Location <input id="editLocation" type="text" /></label>
-        </div>
-        <label class="full-label">Ptz <textarea id="editPtz" rows="3" placeholder='{"pan":65.06,"tilt":-24.94,"zoom":9869}'></textarea></label>
-        <label class="full-label">PtzParameters <textarea id="editPtzParameters" rows="3"></textarea></label>
-        <label class="full-label">RoomCoordinates <textarea id="editRoomCoordinates" rows="3" placeholder='{"x":387,"y":262}'></textarea></label>
-        <label class="check-label advanced-check"><input id="editorSyncExifDatesInput" type="checkbox" checked /> If Timestamp is edited, sync EXIF date fields too</label>
-        <label class="check-label advanced-check"><input id="editorBackupInput" type="checkbox" checked /> Create backup copies before editing</label>
-
-        <details class="advanced-panel">
-          <summary>Advanced editor — EXIF/template fields</summary>
-          <p class="hint">Use these only when you need the image to emulate a real camera/app JPEG more closely. Leave fields blank if you do not want to change them.</p>
-          <div class="settings-grid editor-grid">
-            <label>Make <input id="editMake" type="text" placeholder="AXIS" /></label>
-            <label>Model <input id="editModel" type="text" placeholder="P5655-E" /></label>
-            <label>Software <input id="editSoftware" type="text" placeholder="Sprout Carriage" /></label>
-            <label>ExposureTime <input id="editExposureTime" type="text" placeholder="1/500" /></label>
-            <label>SerialNumber <input id="editSerialNumber" type="text" /></label>
-            <label>ColorSpace <input id="editColorSpace" type="text" placeholder="sRGB" /></label>
-            <label>DateTimeOriginal <input id="editDateTimeOriginal" type="text" placeholder="2026:05:19 19:34:15" /></label>
-            <label>CreateDate <input id="editCreateDate" type="text" placeholder="2026:05:19 19:34:15" /></label>
-            <label>ModifyDate <input id="editModifyDate" type="text" placeholder="2026:05:19 19:34:15" /></label>
-            <label>XResolution <input id="editXResolution" type="text" placeholder="72" /></label>
-            <label>YResolution <input id="editYResolution" type="text" placeholder="72" /></label>
-            <label>ResolutionUnit <input id="editResolutionUnit" type="text" placeholder="inches" /></label>
+          <div class="sidebar-section">
+            <h3>Full Metadata Groups</h3>
+            <label><input class="group-filter" type="checkbox" value="XMP" checked /> XMP / Project <span id="countXMP" class="count-pill">0</span></label>
+            <label><input class="group-filter" type="checkbox" value="EXIF" checked /> EXIF <span id="countEXIF" class="count-pill">0</span></label>
+            <label><input class="group-filter" type="checkbox" value="JFIF" checked /> JFIF <span id="countJFIF" class="count-pill">0</span></label>
+            <label><input class="group-filter" type="checkbox" value="File" checked /> File <span id="countFile" class="count-pill">0</span></label>
+            <label><input class="group-filter" type="checkbox" value="Composite" checked /> Composite <span id="countComposite" class="count-pill">0</span></label>
+            <label><input class="group-filter" type="checkbox" value="ICC_Profile" /> ICC Profile <span id="countICC_Profile" class="count-pill">0</span></label>
+            <label><input class="group-filter" type="checkbox" value="PNG" /> PNG <span id="countPNG" class="count-pill">0</span></label>
           </div>
-        </details>
+          <div class="sidebar-section">
+            <h3>Quick Actions</h3>
+            <button id="selectEditorFilesBtn">＋ Add Files</button>
+            <button id="selectEditorFolderBtn">▣ Add Folder</button>
+            <button id="refreshMetadataBtn">↻ Refresh</button>
+            <button id="clearEditorBtn">🗑 Clear List</button>
+            <label class="check-label"><input id="editorRecursiveInput" type="checkbox" checked /> Include subfolders</label>
+          </div>
+        </aside>
 
-        <details class="readonly-panel">
-          <summary>Read-only technical fields for selected image</summary>
-          <div id="readOnlyMetadata" class="readonly-grid muted">Select an image to view technical fields.</div>
-        </details>
+        <section class="metadata-main">
+          <div class="toolbar">
+            <div class="button-row">
+              <button id="viewAllMetadataBtn">👁 View All Metadata</button>
+              <button id="bulkEditSelectedBtn" class="accent">✎ Bulk Edit Selected</button>
+              <button id="clearSelectionBtn">Clear Selection</button>
+            </div>
+            <div class="search-wrap"><input id="metadataSearchInput" type="search" placeholder="Search metadata or file name..." /><button id="filterBtn">Filter</button></div>
+          </div>
 
-        <div class="button-row">
-          <button id="clearEditFormBtn">Clear Form</button>
-          <button id="applySelectedBtn" class="primary">Apply filled fields to selected image</button>
-          <button id="applyAllBtn" class="primary">Apply filled fields to all loaded images</button>
-        </div>
-        <div id="editorStatus" class="summary muted">No selected image.</div>
-      </section>
+          <div class="metadata-content">
+            <section class="table-panel panel">
+              <div class="table-status"><span id="editorSummary" class="summary muted">No images loaded.</span><span id="selectionSummary" class="selection-summary">0 selected</span></div>
+              <div class="table-wrap">
+                <table class="metadata-table">
+                  <thead id="metadataTableHead"></thead>
+                  <tbody id="metadataTableBody"><tr><td class="muted">No metadata loaded.</td></tr></tbody>
+                </table>
+              </div>
+            </section>
 
-      <section class="card progress-card">
-        <h2>Editor Log</h2>
-        <pre id="editorLogOutput" class="log"></pre>
-      </section>
+            <aside class="selected-panel panel">
+              <div class="selected-header">
+                <div><h2>Selected Image</h2><p id="selectedFileLabel" class="muted">No image selected.</p></div>
+                <div class="tiny-nav"><span id="selectedCountLabel">0 of 0</span></div>
+              </div>
+              <div class="selected-preview"><div class="image-placeholder small">Preview</div><div id="selectedTechnicalSummary" class="muted">Select an image to view details.</div></div>
+              <div class="sub-tabs"><button class="sub-tab active" data-subtab="projectEditPanel">Project Fields</button><button class="sub-tab" data-subtab="advancedEditPanel">Advanced Fields</button><button class="sub-tab" data-subtab="fullMetaPanel">All Metadata</button></div>
+
+              <section id="projectEditPanel" class="sub-panel active">
+                <p class="hint">Check the fields you want to apply. Unchecked fields stay untouched during bulk edits.</p>
+                <div class="field-grid">
+                  <label class="editable-field"><input class="edit-check" data-kind="project" data-tag="Timestamp" id="checkTimestamp" type="checkbox" /><span>Timestamp</span><input id="editTimestamp" type="text" placeholder="2025:02:28 11:16:11.072-0500" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="project" data-tag="Location-index" id="checkLocationIndex" type="checkbox" /><span>Location-index</span><input id="editLocationIndex" type="text" placeholder="1612" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="project" data-tag="CameraType" id="checkCameraType" type="checkbox" /><span>CameraType</span><input id="editCameraType" type="text" placeholder="RGB" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="project" data-tag="ImagingDevice" id="checkImagingDevice" type="checkbox" /><span>ImagingDevice</span><input id="editImagingDevice" type="text" placeholder="S4008" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="project" data-tag="CameraTableLocation" id="checkCameraTableLocation" type="checkbox" /><span>CameraTableLocation</span><input id="editCameraTableLocation" type="text" placeholder="Zone_1.Table A" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="project" data-tag="BaselineHeight" id="checkBaselineHeight" type="checkbox" /><span>BaselineHeight</span><input id="editBaselineHeight" type="text" placeholder="120.25" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="project" data-tag="Location" id="checkLocation" type="checkbox" /><span>Location</span><input id="editLocation" type="text" placeholder="Zone_1.Table A.Tray 1" /></label>
+                </div>
+                <label class="editable-field text-area-field"><input class="edit-check" data-kind="project" data-tag="Ptz" id="checkPtz" type="checkbox" /><span>Ptz</span><textarea id="editPtz" rows="2" placeholder='{"pan":65.06,"tilt":-24.94,"zoom":9869}'></textarea></label>
+                <label class="editable-field text-area-field"><input class="edit-check" data-kind="project" data-tag="PtzParameters" id="checkPtzParameters" type="checkbox" /><span>PtzParameters</span><textarea id="editPtzParameters" rows="2" placeholder='{"heightToPlant":25.1687,"maxRadius":240.0,"panOverlap":0.0,"resolution":2.0,"tiltOverlap":0.0}'></textarea></label>
+                <label class="editable-field text-area-field"><input class="edit-check" data-kind="project" data-tag="RoomCoordinates" id="checkRoomCoordinates" type="checkbox" /><span>RoomCoordinates</span><textarea id="editRoomCoordinates" rows="2" placeholder='{"x":387,"y":262}'></textarea></label>
+              </section>
+
+              <section id="advancedEditPanel" class="sub-panel">
+                <p class="hint">Advanced fields are optional. Check only what you truly need to change.</p>
+                <div class="field-grid">
+                  <label class="editable-field"><input class="edit-check" data-kind="advanced" data-tag="Make" id="checkMake" type="checkbox" /><span>Make</span><input id="editMake" type="text" placeholder="AXIS" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="advanced" data-tag="Model" id="checkModel" type="checkbox" /><span>Model</span><input id="editModel" type="text" placeholder="P5655-E" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="advanced" data-tag="Software" id="checkSoftware" type="checkbox" /><span>Software</span><input id="editSoftware" type="text" placeholder="Sprout Carriage" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="advanced" data-tag="ExposureTime" id="checkExposureTime" type="checkbox" /><span>ExposureTime</span><input id="editExposureTime" type="text" placeholder="1/500" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="advanced" data-tag="SerialNumber" id="checkSerialNumber" type="checkbox" /><span>SerialNumber</span><input id="editSerialNumber" type="text" placeholder="E8272507B71A" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="advanced" data-tag="ColorSpace" id="checkColorSpace" type="checkbox" /><span>ColorSpace</span><input id="editColorSpace" type="text" placeholder="sRGB" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="advanced" data-tag="DateTimeOriginal" id="checkDateTimeOriginal" type="checkbox" /><span>DateTimeOriginal</span><input id="editDateTimeOriginal" type="text" placeholder="2025:02:28 11:16:11" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="advanced" data-tag="CreateDate" id="checkCreateDate" type="checkbox" /><span>CreateDate</span><input id="editCreateDate" type="text" placeholder="2025:02:28 11:16:11" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="advanced" data-tag="ModifyDate" id="checkModifyDate" type="checkbox" /><span>ModifyDate</span><input id="editModifyDate" type="text" placeholder="2025:02:28 11:16:11" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="advanced" data-tag="XResolution" id="checkXResolution" type="checkbox" /><span>XResolution</span><input id="editXResolution" type="text" placeholder="72" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="advanced" data-tag="YResolution" id="checkYResolution" type="checkbox" /><span>YResolution</span><input id="editYResolution" type="text" placeholder="72" /></label>
+                  <label class="editable-field"><input class="edit-check" data-kind="advanced" data-tag="ResolutionUnit" id="checkResolutionUnit" type="checkbox" /><span>ResolutionUnit</span><input id="editResolutionUnit" type="text" placeholder="inches" /></label>
+                </div>
+              </section>
+
+              <section id="fullMetaPanel" class="sub-panel">
+                <div id="allMetadataView" class="all-meta-view muted">Select an image and click “View All Metadata.”</div>
+              </section>
+
+              <div class="editor-options">
+                <label class="check-label"><input id="editorSyncExifDatesInput" type="checkbox" checked /> Sync EXIF dates when Timestamp changes</label>
+                <label class="check-label"><input id="editorBackupInput" type="checkbox" checked /> Backup before edit</label>
+              </div>
+              <div class="button-row sticky-actions">
+                <button id="clearEditFormBtn">Reset Fields</button>
+                <button id="applySelectedBtn" class="primary">Apply Checked Fields</button>
+              </div>
+              <div id="editorStatus" class="summary muted">No selected image.</div>
+            </aside>
+          </div>
+
+          <section class="panel log-panel editor-log-panel">
+            <div class="panel-header"><h2>Activity / Log</h2><button id="clearEditorLogBtn" class="ghost">Clear Log</button></div>
+            <pre id="editorLogOutput" class="log">Load images to begin.</pre>
+          </section>
+        </section>
+      </div>
     </section>
   </main>
 
