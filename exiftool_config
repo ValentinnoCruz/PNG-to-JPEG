@@ -1,5 +1,5 @@
-# ExifTool custom XMP configuration for the Image Metadata Manager v4.6
-# This defines the project fields found in the current Sprout/AIP JPEG metadata sample and v4.6 template-emulation mode
+# ExifTool custom XMP configuration for the Image Metadata Manager v4.7
+# This defines the project fields found in the current Sprout/AIP JPEG metadata sample and v4.7 template-emulation mode
 # so ExifTool can write them as individual XMP tags on converted JPEG files.
 
 %Image::ExifTool::UserDefined = (
