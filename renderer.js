@@ -511,7 +511,11 @@ async function loadEditorMetadata() {
 }
 
 // Converter events
-qualityInput.addEventListener('input', () => { qualityValue.textContent = qualityInput.value; });
+qualityInput.addEventListener('input', () => {
+  qualityValue.textContent = qualityInput.value;
+  const heroQuality = $('heroQualityValue');
+  if (heroQuality) heroQuality.textContent = qualityInput.value;
+});
 clearConvertLogBtn.addEventListener('click', () => { logOutput.textContent = ''; });
 
 checkToolsBtn.addEventListener('click', async () => {

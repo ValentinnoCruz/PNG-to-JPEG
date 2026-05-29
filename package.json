@@ -1,7 +1,7 @@
 {
   "name": "png-to-jpeg-metadata-converter",
-  "version": "4.5.0",
-  "description": "Offline PNG to JPEG converter with real JPEG template emulation plus safe project metadata viewer/bulk editor with a streamlined dark UI, clearer converter workflow, working image previews, expanded editor layout, selective multi-image bulk editing, full metadata viewer filters, and advanced EXIF editing.",
+  "version": "4.6.0",
+  "description": "Offline PNG to JPEG converter with real JPEG template emulation plus safe project metadata viewer/bulk editor. v4.6 simplifies the converter UI and removes the duplicate preview placeholder from the selected image panel.",
   "main": "main.js",
   "author": "Val Cruz",
   "scripts": {
@@ -14,7 +14,7 @@
     "electron-builder": "^26.0.0"
   },
   "build": {
-    "appId": "com.valcruz.pngjpegmetadata.v4_5",
+    "appId": "com.valcruz.pngjpegmetadata.v4_6",
     "productName": "PNG to JPEG Metadata Converter",
     "directories": {
       "output": "dist"

@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Image Metadata Manager v4.5</title>
+  <title>Image Metadata Manager v4.6</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-icon">▣</span><span>Image Metadata Manager v4.5</span></div>
+      <div class="brand"><span class="brand-icon">▣</span><span>Image Metadata Manager v4.6</span></div>
       <nav class="top-tabs">
         <button id="convertTabBtn" class="top-tab active">PNG to JPEG Converter</button>
         <button id="editorTabBtn" class="top-tab">Metadata Viewer / Editor</button>
@@ -18,83 +18,113 @@
     </header>
 
     <section id="convertTab" class="tab-panel active">
-      <div class="converter-layout">
-        <aside class="step-sidebar">
-          <h3>Converter Workflow</h3>
-          <button class="step-link active" data-target="inputPanel"><span>1</span><b>Select Input</b><small>Jump to PNG file/folder selection</small></button>
-          <button class="step-link" data-target="templatePanel"><span>2</span><b>Template JPEG</b><small>Jump to reference JPEG metadata shell</small></button>
-          <button class="step-link" data-target="settingsPanelConvert"><span>3</span><b>Output Settings</b><small>Jump to quality/date/output settings</small></button>
-          <button class="step-link" data-target="convertPanel"><span>4</span><b>Convert</b><small>Jump to conversion controls</small></button>
-        </aside>
+      <div class="converter-simple">
+        <section class="converter-hero panel">
+          <div>
+            <h1>PNG to JPEG Converter</h1>
+            <p class="muted">Convert PNG images to JPEG while copying a real JPEG metadata template and writing project fields as XMP.</p>
+          </div>
+          <div class="hero-status">
+            <span class="status-chip">Quality <b id="heroQualityValue">95</b></span>
+            <span class="status-chip">Chroma <b>4:2:0</b></span>
+            <span class="status-chip">EXIF date sync <b>On</b></span>
+          </div>
+        </section>
 
-        <section class="convert-workspace">
-          <div class="convert-grid">
-            <section id="inputPanel" class="panel input-panel scroll-target">
-              <div class="panel-header"><h2>1. Select PNG Input</h2></div>
-              <div class="inline-options">
+        <section class="converter-main-grid">
+          <section id="inputPanel" class="panel convert-card main-card scroll-target">
+            <div class="panel-header stacked-header">
+              <div>
+                <span class="step-pill">Step 1</span>
+                <h2>Select PNG Input</h2>
+              </div>
+              <div class="compact-toggle-row">
                 <label><input type="radio" name="inputMode" checked /> Files</label>
                 <label><input type="radio" name="inputMode" /> Folder</label>
-                <label class="check-label"><input id="recursiveInput" type="checkbox" checked /> Include subfolders</label>
-                <label class="check-label"><input id="preserveFoldersInput" type="checkbox" checked /> Preserve folders</label>
               </div>
-              <div class="drop-zone">
-                <p>Drag & drop PNG files here</p>
-                <p class="muted">or select files/folder below</p>
-                <div class="button-row centered">
-                  <button id="selectFilesBtn">Browse Files</button>
-                  <button id="selectFolderBtn">Browse Folder</button>
+            </div>
+            <div class="drop-zone simple-drop">
+              <p>Drag & drop PNG files here</p>
+              <p class="muted">or choose files/folder manually</p>
+              <div class="button-row centered">
+                <button id="selectFilesBtn">Browse Files</button>
+                <button id="selectFolderBtn">Browse Folder</button>
+              </div>
+            </div>
+            <div class="compact-options-row">
+              <label class="check-label"><input id="recursiveInput" type="checkbox" checked /> Include subfolders</label>
+              <label class="check-label"><input id="preserveFoldersInput" type="checkbox" checked /> Preserve folders</label>
+            </div>
+            <div id="inputSummary" class="summary muted">No PNG files selected.</div>
+          </section>
+
+          <aside class="converter-side-stack">
+            <section id="templatePanel" class="panel convert-card scroll-target">
+              <div class="panel-header stacked-header">
+                <div>
+                  <span class="step-pill">Step 2</span>
+                  <h2>Template JPEG</h2>
                 </div>
               </div>
-              <div id="inputSummary" class="summary muted">No PNG files selected.</div>
-            </section>
-
-            <section id="templatePanel" class="panel template-panel scroll-target">
-              <div class="panel-header"><h2>2. Template JPEG</h2></div>
-              <p class="muted">Use a current real JPEG as the metadata shell. PNG project fields overwrite matching XMP fields.</p>
-              <div class="template-preview"><div class="image-placeholder">JPEG<br>Template</div></div>
-              <div class="button-row centered">
+              <p class="hint">Use one current real JPEG as the metadata shell. PNG project fields overwrite matching XMP fields.</p>
+              <div class="button-row">
                 <button id="selectTemplateBtn">Choose Template</button>
                 <button id="clearTemplateBtn">Clear</button>
               </div>
               <div id="templateSummary" class="summary muted">No template JPEG selected.</div>
             </section>
 
-            <section id="settingsPanelConvert" class="panel settings-panel-convert scroll-target">
-              <div class="panel-header"><h2>3. Output Settings</h2></div>
-              <label>Output Format <select disabled><option>JPEG (.jpg)</option></select></label>
-              <label>JPEG Quality <input id="qualityInput" type="range" min="1" max="100" value="95" /><span id="qualityValue" class="value-pill">95</span></label>
-              <label>Chroma Sampling
-                <select id="samplingInput">
-                  <option value="4:2:0" selected>4:2:0 — current JPEG sample</option>
-                  <option value="4:4:4">4:4:4 — highest color fidelity</option>
-                  <option value="4:2:2">4:2:2 — middle option</option>
-                </select>
-              </label>
-              <label>Transparency background <input id="backgroundInput" type="text" value="white" /></label>
-              <label class="check-label"><input id="syncExifDatesInput" type="checkbox" checked /> Sync EXIF date fields</label>
-              <label class="check-label"><input id="embedJsonBackupInput" type="checkbox" /> Embed JSON backup in JPEG</label>
-              <label class="full-label tiny-hidden">Required project metadata fields<textarea id="verifyTagsInput" rows="3">Timestamp, Location-index, CameraType, ImagingDevice, CameraTableLocation, BaselineHeight, Ptz, PtzParameters, RoomCoordinates, Location</textarea></label>
-              <div class="output-row"><input id="outputSummary" class="output-summary" readonly value="No output folder selected." /><button id="selectOutputBtn">Browse</button></div>
-            </section>
-
-            <section id="convertPanel" class="panel convert-panel scroll-target">
-              <div class="panel-header"><h2>4. Convert</h2></div>
-              <div class="ready-box"><b>Ready when input, template, and output are selected.</b><span id="progressText">Idle</span></div>
-              <button id="convertBtn" class="primary large">▶ Convert Now</button>
-              <button id="checkToolsBtn">Check Tools</button>
-              <div class="tool-grid compact">
-                <div id="magickStatus" class="status-box neutral">ImageMagick: Not checked</div>
-                <div id="exiftoolStatus" class="status-box neutral">ExifTool: Not checked</div>
-                <div id="configStatus" class="status-box neutral">Config: Not checked</div>
+            <section id="settingsPanelConvert" class="panel convert-card scroll-target">
+              <div class="panel-header stacked-header">
+                <div>
+                  <span class="step-pill">Step 3</span>
+                  <h2>Output Settings</h2>
+                </div>
               </div>
+              <div class="settings-two-column">
+                <label>JPEG Quality <input id="qualityInput" type="range" min="1" max="100" value="95" /><span id="qualityValue" class="value-pill">95</span></label>
+                <label>Chroma Sampling
+                  <select id="samplingInput">
+                    <option value="4:2:0" selected>4:2:0 — current JPEG sample</option>
+                    <option value="4:4:4">4:4:4 — highest color fidelity</option>
+                    <option value="4:2:2">4:2:2 — middle option</option>
+                  </select>
+                </label>
+                <label>Transparency background <input id="backgroundInput" type="text" value="white" /></label>
+                <label>Output Format <select disabled><option>JPEG (.jpg)</option></select></label>
+              </div>
+              <div class="compact-options-row">
+                <label class="check-label"><input id="syncExifDatesInput" type="checkbox" checked /> Sync EXIF dates</label>
+                <label class="check-label"><input id="embedJsonBackupInput" type="checkbox" /> Embed JSON backup</label>
+              </div>
+              <label class="full-label tiny-hidden">Required project metadata fields<textarea id="verifyTagsInput" rows="3">Timestamp, Location-index, CameraType, ImagingDevice, CameraTableLocation, BaselineHeight, Ptz, PtzParameters, RoomCoordinates, Location</textarea></label>
+              <div class="output-row"><input id="outputSummary" class="output-summary" readonly value="No output folder selected." /><button id="selectOutputBtn">Browse Output</button></div>
             </section>
-          </div>
+          </aside>
+        </section>
 
-          <section class="panel log-panel">
-            <div class="progress-bar"><div id="progressFill"></div></div>
-            <div class="panel-header"><h2>Conversion Log</h2><button id="clearConvertLogBtn" class="ghost">Clear Log</button></div>
-            <pre id="logOutput" class="log">Ready. Add PNG files, select template, and click Convert Now.</pre>
-          </section>
+        <section id="convertPanel" class="panel convert-action-card scroll-target">
+          <div class="convert-action-left">
+            <span class="step-pill">Step 4</span>
+            <h2>Convert</h2>
+            <p class="muted">Recommended: Quality 95, Chroma 4:2:0, EXIF date sync on.</p>
+            <div class="ready-box compact-ready"><b>Ready status</b><span id="progressText">Idle</span></div>
+          </div>
+          <div class="convert-action-buttons">
+            <button id="convertBtn" class="primary large">▶ Convert Now</button>
+            <button id="checkToolsBtn">Check Tools</button>
+          </div>
+          <div class="tool-grid compact horizontal-tools">
+            <div id="magickStatus" class="status-box neutral">ImageMagick: Not checked</div>
+            <div id="exiftoolStatus" class="status-box neutral">ExifTool: Not checked</div>
+            <div id="configStatus" class="status-box neutral">Config: Not checked</div>
+          </div>
+        </section>
+
+        <section class="panel log-panel compact-log-panel">
+          <div class="progress-bar"><div id="progressFill"></div></div>
+          <div class="panel-header"><h2>Conversion Log</h2><button id="clearConvertLogBtn" class="ghost">Clear Log</button></div>
+          <pre id="logOutput" class="log">Ready. Add PNG files, select template, and click Convert Now.</pre>
         </section>
       </div>
     </section>
@@ -157,7 +187,7 @@
                 <div><h2>Selected Image</h2><p id="selectedFileLabel" class="muted">No image selected.</p></div>
                 <div class="tiny-nav"><span id="selectedCountLabel">0 of 0</span></div>
               </div>
-              <div class="selected-preview"><img id="selectedPreviewImage" class="preview-image" alt="Selected image preview" hidden /><div id="selectedPreviewPlaceholder" class="image-placeholder small">Preview</div><div id="selectedTechnicalSummary" class="muted">Select an image to view details.</div></div>
+              <div class="selected-preview"><img id="selectedPreviewImage" class="preview-image" alt="Selected image preview" hidden /><div id="selectedTechnicalSummary" class="muted">Select an image to view details.</div></div>
               <div class="sub-tabs"><button class="sub-tab active" data-subtab="projectEditPanel">Project Fields</button><button class="sub-tab" data-subtab="advancedEditPanel">Advanced Fields</button><button class="sub-tab" data-subtab="fullMetaPanel">All Metadata</button></div>
 
               <section id="projectEditPanel" class="sub-panel active">
