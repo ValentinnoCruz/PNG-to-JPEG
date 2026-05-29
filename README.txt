@@ -1,9 +1,9 @@
-Image Metadata Manager v4.4
+Image Metadata Manager v4.5
 ===========================
 
 Offline Windows/Electron QA utility for converting PNG images into JPEG images while emulating the current real JPEG metadata format used by the project. It also includes a cleaner metadata viewer/editor with selective bulk editing.
 
-What v4.4 adds:
+What v4.5 adds:
 - Redesigned dark/slate UI for both the PNG to JPEG converter and Metadata Viewer / Editor.
 - Cleaner converter workflow: Select Input, Template JPEG, Output Settings, Convert.
 - Metadata viewer defaults to Project Fields instead of showing everything at once.

@@ -151,6 +151,9 @@ const selectedFileLabel = $('selectedFileLabel');
 const selectedCountLabel = $('selectedCountLabel');
 const selectedTechnicalSummary = $('selectedTechnicalSummary');
 const allMetadataView = $('allMetadataView');
+const expandSelectedPanelBtn = $('expandSelectedPanelBtn');
+const selectedPreviewImage = $('selectedPreviewImage');
+const selectedPreviewPlaceholder = $('selectedPreviewPlaceholder');
 
 const editInputs = {
   Timestamp: $('editTimestamp'),
@@ -190,6 +193,18 @@ function setActiveTab(tabName) {
 
 convertTabBtn.addEventListener('click', () => setActiveTab('convert'));
 editorTabBtn.addEventListener('click', () => setActiveTab('editor'));
+
+$$('.step-link').forEach((button) => {
+  button.addEventListener('click', () => {
+    $$('.step-link').forEach((btn) => btn.classList.toggle('active', btn === button));
+    const target = $(button.getAttribute('data-target'));
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.classList.add('focus-pulse');
+      setTimeout(() => target.classList.remove('focus-pulse'), 900);
+    }
+  });
+});
 
 function setStatus(element, ok, text) {
   element.className = `status-box ${ok ? 'ok' : 'bad'}`;
@@ -305,10 +320,37 @@ function escapeAttr(value) {
   return String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+
+function clearImagePreview() {
+  if (selectedPreviewImage) {
+    selectedPreviewImage.hidden = true;
+    selectedPreviewImage.removeAttribute('src');
+  }
+  if (selectedPreviewPlaceholder) { selectedPreviewPlaceholder.hidden = false; selectedPreviewPlaceholder.textContent = 'Preview'; }
+}
+
+async function loadImagePreview(filePath) {
+  clearImagePreview();
+  if (!filePath || !selectedPreviewImage) return;
+
+  try {
+    const result = await window.converterApi.getImagePreview(filePath);
+    selectedPreviewImage.src = result.dataUrl;
+    selectedPreviewImage.hidden = false;
+    if (selectedPreviewPlaceholder) selectedPreviewPlaceholder.hidden = true;
+  } catch (error) {
+    if (selectedPreviewPlaceholder) {
+      selectedPreviewPlaceholder.hidden = false;
+      selectedPreviewPlaceholder.textContent = 'Preview unavailable';
+    }
+  }
+}
+
 function selectEditorRow(index) {
   editorState.selectedIndex = index;
   const row = editorState.rows[index];
   if (!row) return;
+  loadImagePreview(row.FilePath);
 
   for (const tag of PROJECT_TAGS) editInputs[tag].value = row[tag] || '';
   for (const tag of ADVANCED_TAGS) advancedInputs[tag].value = row[tag] || '';
@@ -452,7 +494,8 @@ async function loadEditorMetadata() {
     selectedFileLabel.textContent = 'No image selected.';
     selectedCountLabel.textContent = `0 of ${editorState.rows.length}`;
     selectedTechnicalSummary.textContent = 'Select an image to view details.';
-    allMetadataView.innerHTML = '<span class="muted">Select an image and click “View All Metadata.”</span>';
+    clearImagePreview();
+    allMetadataView.innerHTML = '<span class="muted">Select an image, then click “Open All Metadata Panel.” Use the left group filters to show/hide groups.</span>';
     clearEditForm();
     renderMetadataTable();
     updateEditorSummary();
@@ -610,7 +653,8 @@ clearEditorBtn.addEventListener('click', () => {
   clearEditForm();
   selectedFileLabel.textContent = 'No image selected.';
   selectedTechnicalSummary.textContent = 'Select an image to view details.';
-  allMetadataView.innerHTML = '<span class="muted">Select an image and click “View All Metadata.”</span>';
+  clearImagePreview();
+  allMetadataView.innerHTML = '<span class="muted">Select an image, then click “Open All Metadata Panel.” Use the left group filters to show/hide groups.</span>';
 });
 clearSelectionBtn.addEventListener('click', () => {
   editorState.checkedFiles.clear();
@@ -622,6 +666,14 @@ bulkEditSelectedBtn.addEventListener('click', () => {
   editorStatus.textContent = `${editorState.checkedFiles.size || (editorState.selectedIndex >= 0 ? 1 : 0)} image(s) targeted. Check the fields you want to edit.`;
 });
 viewAllMetadataBtn.addEventListener('click', () => loadFullMetadataForSelected(true));
+if (expandSelectedPanelBtn) {
+  expandSelectedPanelBtn.addEventListener('click', () => {
+    editorTab.classList.toggle('details-expanded');
+    const expanded = editorTab.classList.contains('details-expanded');
+    expandSelectedPanelBtn.textContent = expanded ? '⇔ Standard Details Panel' : '⇔ Expand Details Panel';
+  });
+}
+
 metadataSearchInput.addEventListener('input', () => { renderMetadataTable(); renderAllMetadata(); });
 $$('.group-filter').forEach((input) => input.addEventListener('change', renderAllMetadata));
 $$('.view-mode').forEach((button) => {

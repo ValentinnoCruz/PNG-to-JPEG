@@ -204,3 +204,62 @@ p { margin: 0; }
   .topbar { grid-template-columns: 1fr; height: auto; padding: 12px; }
   .top-actions { display: none; }
 }
+
+/* v4.5 usability polish */
+.sidebar-help {
+  margin: -4px 0 6px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.step-link { cursor: pointer; }
+.step-link:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.scroll-target.focus-pulse {
+  border-color: rgba(47, 128, 237, .8);
+  box-shadow: 0 0 0 3px rgba(47,128,237,.18), 0 16px 40px rgba(0,0,0,.25);
+}
+.search-wrap { grid-template-columns: minmax(260px, 460px); }
+.metadata-content { grid-template-columns: minmax(420px, 1fr) minmax(640px, 720px); }
+#editorTab.details-expanded .metadata-content { grid-template-columns: minmax(320px, .68fr) minmax(760px, 1.32fr); }
+#editorTab.details-expanded .metadata-table { min-width: 760px; }
+.selected-panel { min-width: 0; }
+.selected-preview { align-items: flex-start; }
+.preview-image {
+  width: 175px;
+  height: 105px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid #32445b;
+  background: #07101a;
+  flex: 0 0 auto;
+}
+.selected-preview .muted { line-height: 1.45; overflow-wrap: anywhere; }
+.selected-panel .field-grid { grid-template-columns: 1fr; gap: 8px; }
+.editable-field {
+  grid-template-columns: 22px minmax(150px, 190px) minmax(340px, 1fr);
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.editable-field input[type="text"],
+.editable-field select,
+.editable-field textarea {
+  min-height: 42px;
+  font-size: 14px;
+}
+.text-area-field { grid-template-columns: 22px minmax(150px, 190px) minmax(340px, 1fr); }
+.text-area-field textarea { min-height: 88px; line-height: 1.45; }
+.sub-panel { max-height: calc(100vh - 445px); }
+#advancedEditPanel.sub-panel,
+#projectEditPanel.sub-panel { padding-bottom: 8px; }
+.all-meta-view { max-height: calc(100vh - 430px); }
+.meta-row { grid-template-columns: minmax(140px, 210px) minmax(280px, 1fr); }
+.field-help-note {
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 1480px) {
+  .metadata-content { grid-template-columns: minmax(380px, 1fr) minmax(600px, 680px); }
+  #editorTab.details-expanded .metadata-content { grid-template-columns: minmax(280px, .6fr) minmax(700px, 1.4fr); }
+  .editable-field { grid-template-columns: 22px 160px minmax(300px, 1fr); }
+  .text-area-field { grid-template-columns: 22px 160px minmax(300px, 1fr); }
+}

@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Image Metadata Manager v4.4</title>
+  <title>Image Metadata Manager v4.5</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-icon">▣</span><span>Image Metadata Manager v4.4</span></div>
+      <div class="brand"><span class="brand-icon">▣</span><span>Image Metadata Manager v4.5</span></div>
       <nav class="top-tabs">
         <button id="convertTabBtn" class="top-tab active">PNG to JPEG Converter</button>
         <button id="editorTabBtn" class="top-tab">Metadata Viewer / Editor</button>
@@ -20,15 +20,16 @@
     <section id="convertTab" class="tab-panel active">
       <div class="converter-layout">
         <aside class="step-sidebar">
-          <button class="step-link active"><span>1</span><b>Select Input</b><small>Choose PNG files or folder</small></button>
-          <button class="step-link"><span>2</span><b>Template JPEG</b><small>Choose reference JPEG</small></button>
-          <button class="step-link"><span>3</span><b>Output Settings</b><small>Set output options</small></button>
-          <button class="step-link"><span>4</span><b>Convert</b><small>Start conversion</small></button>
+          <h3>Converter Workflow</h3>
+          <button class="step-link active" data-target="inputPanel"><span>1</span><b>Select Input</b><small>Jump to PNG file/folder selection</small></button>
+          <button class="step-link" data-target="templatePanel"><span>2</span><b>Template JPEG</b><small>Jump to reference JPEG metadata shell</small></button>
+          <button class="step-link" data-target="settingsPanelConvert"><span>3</span><b>Output Settings</b><small>Jump to quality/date/output settings</small></button>
+          <button class="step-link" data-target="convertPanel"><span>4</span><b>Convert</b><small>Jump to conversion controls</small></button>
         </aside>
 
         <section class="convert-workspace">
           <div class="convert-grid">
-            <section class="panel input-panel">
+            <section id="inputPanel" class="panel input-panel scroll-target">
               <div class="panel-header"><h2>1. Select PNG Input</h2></div>
               <div class="inline-options">
                 <label><input type="radio" name="inputMode" checked /> Files</label>
@@ -47,7 +48,7 @@
               <div id="inputSummary" class="summary muted">No PNG files selected.</div>
             </section>
 
-            <section class="panel template-panel">
+            <section id="templatePanel" class="panel template-panel scroll-target">
               <div class="panel-header"><h2>2. Template JPEG</h2></div>
               <p class="muted">Use a current real JPEG as the metadata shell. PNG project fields overwrite matching XMP fields.</p>
               <div class="template-preview"><div class="image-placeholder">JPEG<br>Template</div></div>
@@ -58,7 +59,7 @@
               <div id="templateSummary" class="summary muted">No template JPEG selected.</div>
             </section>
 
-            <section class="panel settings-panel-convert">
+            <section id="settingsPanelConvert" class="panel settings-panel-convert scroll-target">
               <div class="panel-header"><h2>3. Output Settings</h2></div>
               <label>Output Format <select disabled><option>JPEG (.jpg)</option></select></label>
               <label>JPEG Quality <input id="qualityInput" type="range" min="1" max="100" value="95" /><span id="qualityValue" class="value-pill">95</span></label>
@@ -76,7 +77,7 @@
               <div class="output-row"><input id="outputSummary" class="output-summary" readonly value="No output folder selected." /><button id="selectOutputBtn">Browse</button></div>
             </section>
 
-            <section class="panel convert-panel">
+            <section id="convertPanel" class="panel convert-panel scroll-target">
               <div class="panel-header"><h2>4. Convert</h2></div>
               <div class="ready-box"><b>Ready when input, template, and output are selected.</b><span id="progressText">Idle</span></div>
               <button id="convertBtn" class="primary large">▶ Convert Now</button>
@@ -102,14 +103,15 @@
       <div class="editor-layout">
         <aside class="metadata-sidebar">
           <div class="sidebar-section">
-            <h3>View Mode</h3>
+            <h3>Table View</h3>
             <button class="view-mode active" data-view="project">▣ Project Fields</button>
             <button class="view-mode" data-view="camera">▣ Camera / EXIF</button>
             <button class="view-mode" data-view="technical">▣ Technical</button>
-            <button class="view-mode" data-view="all">☰ All Metadata Summary</button>
+            <button class="view-mode" data-view="all">☰ Mixed Summary</button>
           </div>
           <div class="sidebar-section">
-            <h3>Full Metadata Groups</h3>
+            <h3>All Metadata Panel Filters</h3>
+            <p class="sidebar-help">These filters only affect the Selected Image → All Metadata panel.</p>
             <label><input class="group-filter" type="checkbox" value="XMP" checked /> XMP / Project <span id="countXMP" class="count-pill">0</span></label>
             <label><input class="group-filter" type="checkbox" value="EXIF" checked /> EXIF <span id="countEXIF" class="count-pill">0</span></label>
             <label><input class="group-filter" type="checkbox" value="JFIF" checked /> JFIF <span id="countJFIF" class="count-pill">0</span></label>
@@ -131,11 +133,12 @@
         <section class="metadata-main">
           <div class="toolbar">
             <div class="button-row">
-              <button id="viewAllMetadataBtn">👁 View All Metadata</button>
+              <button id="viewAllMetadataBtn">👁 Open All Metadata Panel</button>
               <button id="bulkEditSelectedBtn" class="accent">✎ Bulk Edit Selected</button>
+              <button id="expandSelectedPanelBtn">⇔ Expand Details Panel</button>
               <button id="clearSelectionBtn">Clear Selection</button>
             </div>
-            <div class="search-wrap"><input id="metadataSearchInput" type="search" placeholder="Search metadata or file name..." /><button id="filterBtn">Filter</button></div>
+            <div class="search-wrap"><input id="metadataSearchInput" type="search" placeholder="Search current table and All Metadata panel..." /></div>
           </div>
 
           <div class="metadata-content">
@@ -154,11 +157,11 @@
                 <div><h2>Selected Image</h2><p id="selectedFileLabel" class="muted">No image selected.</p></div>
                 <div class="tiny-nav"><span id="selectedCountLabel">0 of 0</span></div>
               </div>
-              <div class="selected-preview"><div class="image-placeholder small">Preview</div><div id="selectedTechnicalSummary" class="muted">Select an image to view details.</div></div>
+              <div class="selected-preview"><img id="selectedPreviewImage" class="preview-image" alt="Selected image preview" hidden /><div id="selectedPreviewPlaceholder" class="image-placeholder small">Preview</div><div id="selectedTechnicalSummary" class="muted">Select an image to view details.</div></div>
               <div class="sub-tabs"><button class="sub-tab active" data-subtab="projectEditPanel">Project Fields</button><button class="sub-tab" data-subtab="advancedEditPanel">Advanced Fields</button><button class="sub-tab" data-subtab="fullMetaPanel">All Metadata</button></div>
 
               <section id="projectEditPanel" class="sub-panel active">
-                <p class="hint">Check the fields you want to apply. Unchecked fields stay untouched during bulk edits.</p>
+                <p class="hint">Edit one image or select multiple images. Only checked fields are applied; unchecked metadata stays untouched.</p>
                 <div class="field-grid">
                   <label class="editable-field"><input class="edit-check" data-kind="project" data-tag="Timestamp" id="checkTimestamp" type="checkbox" /><span>Timestamp</span><input id="editTimestamp" type="text" placeholder="2025:02:28 11:16:11.072-0500" /></label>
                   <label class="editable-field"><input class="edit-check" data-kind="project" data-tag="Location-index" id="checkLocationIndex" type="checkbox" /><span>Location-index</span><input id="editLocationIndex" type="text" placeholder="1612" /></label>
@@ -174,7 +177,7 @@
               </section>
 
               <section id="advancedEditPanel" class="sub-panel">
-                <p class="hint">Advanced fields are optional. Check only what you truly need to change.</p>
+                <p class="hint">Advanced EXIF/template fields are optional. Only checked fields are written.</p>
                 <div class="field-grid">
                   <label class="editable-field"><input class="edit-check" data-kind="advanced" data-tag="Make" id="checkMake" type="checkbox" /><span>Make</span><input id="editMake" type="text" placeholder="AXIS" /></label>
                   <label class="editable-field"><input class="edit-check" data-kind="advanced" data-tag="Model" id="checkModel" type="checkbox" /><span>Model</span><input id="editModel" type="text" placeholder="P5655-E" /></label>
@@ -192,7 +195,7 @@
               </section>
 
               <section id="fullMetaPanel" class="sub-panel">
-                <div id="allMetadataView" class="all-meta-view muted">Select an image and click “View All Metadata.”</div>
+                <div id="allMetadataView" class="all-meta-view muted">Select an image, then click “Open All Metadata Panel.” Use the left group filters to show/hide groups.</div>
               </section>
 
               <div class="editor-options">

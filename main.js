@@ -3,7 +3,7 @@ const path = require('path');
 const fsp = require('fs/promises');
 const { spawn, spawnSync } = require('child_process');
 
-const APP_ID = 'com.valcruz.pngjpegmetadata.v4_4';
+const APP_ID = 'com.valcruz.pngjpegmetadata.v4_5';
 app.setAppUserModelId(APP_ID);
 
 const DEFAULT_PROJECT_TAGS = [
@@ -680,6 +680,14 @@ ipcMain.handle('read-full-metadata', async (_, file) => {
   if (!file || !isImage(file)) throw new Error('Select a PNG/JPEG image file first.');
   const text = await getMetadataText(file);
   return { file, text };
+});
+
+
+ipcMain.handle('get-image-preview', async (_, file) => {
+  if (!file || !isImage(file)) throw new Error('Select a PNG/JPEG image file first.');
+  const data = await fsp.readFile(file);
+  const mime = isPng(file) ? 'image/png' : 'image/jpeg';
+  return { file, dataUrl: `data:${mime};base64,${data.toString('base64')}` };
 });
 
 ipcMain.handle('apply-metadata-edits', async (_, payload) => {
