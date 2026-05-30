@@ -942,12 +942,12 @@ ipcMain.handle('start-conversion', async (event, options) => {
         outputFileName: path.basename(destinationFile),
         createdAt: new Date().toISOString(),
         templateFileName: templateFile ? path.basename(templateFile) : '',
-        note: templateFile ? 'v4.1: Metadata shell is copied from the real JPEG template, then PNG project fields overwrite matching XMP tags. Sidecar JSON is always created; embedded JPEG JSON backup is optional and disabled by default for stricter real-JPEG emulation.' : 'No template selected. Project fields are written as individual XMP tags. Sidecar JSON is always created; embedded JPEG JSON backup is optional and disabled by default.',
+        note: templateFile ? 'v4.1: Metadata shell is copied from the real JPEG template, then PNG project fields overwrite matching XMP tags. Embedded JPEG JSON backup is optional and disabled by default for stricter real-JPEG emulation. Sidecar JSON output is disabled.' : 'No template selected. Project fields are written as individual XMP tags. Embedded JPEG JSON backup is optional and disabled by default. Sidecar JSON output is disabled.',
         projectMetadata
       };
 
       const embeddedJson = JSON.stringify(embeddedPayload);
-      await fsp.writeFile(sidecarFile, JSON.stringify(embeddedPayload, null, 2), 'utf8');
+      row.SidecarJson = '';
 
       // Important v3 pass: write each project field as its own XMP tag.
       if (Object.keys(projectMetadata).length) {
