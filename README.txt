@@ -1,4 +1,4 @@
-Image Metadata Manager v4.8
+PNG2JPEG v4.8
 ===========================
 
 Offline Windows/Electron QA utility for converting PNG images into JPEG images while emulating the current real JPEG metadata format used by the project. It also includes a cleaner metadata viewer/editor with selective bulk editing.

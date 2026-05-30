@@ -15,6 +15,10 @@ contextBridge.exposeInMainWorld('converterApi', {
   getImagePreview: (file) => ipcRenderer.invoke('get-image-preview', file),
   applyMetadataEdits: (payload) => ipcRenderer.invoke('apply-metadata-edits', payload),
 
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  openPath: (target) => ipcRenderer.invoke('open-path', target),
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
+
   onProgress: (callback) => {
     const listener = (_, payload) => callback(payload);
     ipcRenderer.on('convert-progress', listener);
