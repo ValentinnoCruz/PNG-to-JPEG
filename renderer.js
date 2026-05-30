@@ -669,6 +669,10 @@ selectFolderBtn.addEventListener('click', async () => {
     state.sourceRoot = result.sourceRoot;
     updateInputSummary();
     log(`Selected folder. Found ${state.files.length} PNG file(s).`);
+    if (Array.isArray(result.skipped) && result.skipped.length) {
+      log(`Warning: skipped ${result.skipped.length} inaccessible folder(s)/entrie(s). First few:`);
+      result.skipped.slice(0, 5).forEach(s => log(`  - [${s.error}] ${s.path}`));
+    }
   }
 });
 
@@ -756,6 +760,10 @@ selectEditorFolderBtn.addEventListener('click', async () => {
     editorState.sourceRoot = result.sourceRoot;
     updateEditorSummary();
     editorLog(`Selected folder. Found ${editorState.files.length} image(s). Loading metadata...`);
+    if (Array.isArray(result.skipped) && result.skipped.length) {
+      editorLog(`Warning: skipped ${result.skipped.length} inaccessible folder(s)/entrie(s). First few:`);
+      result.skipped.slice(0, 5).forEach(s => editorLog(`  - [${s.error}] ${s.path}`));
+    }
     await loadEditorMetadata();
   }
 });
