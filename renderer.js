@@ -368,7 +368,7 @@ function renderMetadataTable() {
     const selected = originalIndex === editorState.selectedIndex ? 'selected-row' : '';
     return `<tr data-index="${originalIndex}" class="${selected}">
       <td><input class="row-check" type="checkbox" data-path="${escapeAttr(row.FilePath)}" ${checked} /></td>
-      ${columns.map(([key]) => `<td title="${escapeAttr(row[key])}">${truncate(row[key], 56)}</td>`).join('')}
+      ${columns.map(([key]) => `<td title="${escapeAttr(row[key])}">${escapeAttr(row[key] ?? '')}</td>`).join('')}
     </tr>`;
   }).join('');
 
@@ -1034,3 +1034,45 @@ updateInputSummary();
 updateOutputSummary();
 updateTemplateSummary();
 updateEditorSummary();
+
+// Top-bar utility actions: version badge, Open Output, About modal
+(async () => {
+  const versionBadge = document.getElementById('appVersionBadge');
+  const aboutVersion = document.getElementById('aboutVersion');
+  try {
+    const v = await window.converterApi.getAppVersion();
+    if (versionBadge) versionBadge.textContent = `v${v}`;
+    if (aboutVersion) aboutVersion.textContent = v;
+  } catch (_) { /* ignore */ }
+})();
+
+const topOpenOutputBtn = document.getElementById('topOpenOutputBtn');
+function refreshTopOpenOutput() {
+  if (!topOpenOutputBtn) return;
+  const hasDir = !!state.outputDir;
+  topOpenOutputBtn.disabled = !hasDir;
+  topOpenOutputBtn.title = hasDir ? `Open ${state.outputDir}` : 'Pick an output folder first';
+}
+if (topOpenOutputBtn) {
+  topOpenOutputBtn.addEventListener('click', async () => {
+    if (!state.outputDir) return;
+    const res = await window.converterApi.openPath(state.outputDir);
+    if (res && !res.ok) log(`Could not open output folder: ${res.error || 'unknown error'}`);
+  });
+}
+const _origUpdateOutputSummary = updateOutputSummary;
+updateOutputSummary = function () { _origUpdateOutputSummary(); refreshTopOpenOutput(); };
+refreshTopOpenOutput();
+
+const aboutModal = document.getElementById('aboutModal');
+const topAboutBtn = document.getElementById('topAboutBtn');
+function openAbout() { if (aboutModal) aboutModal.hidden = false; }
+function closeAbout() { if (aboutModal) aboutModal.hidden = true; }
+if (topAboutBtn) topAboutBtn.addEventListener('click', openAbout);
+document.getElementById('aboutCloseBtn')?.addEventListener('click', closeAbout);
+document.getElementById('aboutCloseBtn2')?.addEventListener('click', closeAbout);
+document.getElementById('aboutOpenRepoBtn')?.addEventListener('click', () => {
+  window.converterApi.openExternal('https://github.com/ValentinnoCruz/PNG-to-JPEG');
+});
+if (aboutModal) aboutModal.addEventListener('click', (e) => { if (e.target === aboutModal) closeAbout(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && aboutModal && !aboutModal.hidden) closeAbout(); });

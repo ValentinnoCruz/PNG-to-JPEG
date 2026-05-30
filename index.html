@@ -3,18 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Image Metadata Manager v4.8</title>
+  <title>PNG2JPEG v4.8.1</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-icon">▣</span><span>Image Metadata Manager v4.8</span></div>
+      <div class="brand"><span class="brand-icon">▣</span><span>PNG2JPEG v4.8.1</span></div>
       <nav class="top-tabs">
         <button id="convertTabBtn" class="top-tab active">PNG to JPEG Converter</button>
         <button id="editorTabBtn" class="top-tab">Metadata Viewer / Editor</button>
       </nav>
-      <div class="top-actions"><span>⚙ Settings</span><span>? Help</span><span>ⓘ About</span></div>
+      <div class="top-actions">
+        <span id="appVersionBadge" class="version-badge" title="App version">v—</span>
+        <button id="topOpenOutputBtn" class="top-action-btn" title="Open current output folder in Explorer" disabled>📂 Open Output</button>
+        <button id="topAboutBtn" class="top-action-btn" title="About this app">ⓘ About</button>
+      </div>
     </header>
 
     <section id="convertTab" class="tab-panel active">
@@ -78,10 +82,6 @@
                 <div>
                   <span class="step-pill">Step 1</span>
                   <h2>Select PNG Input</h2>
-                </div>
-                <div class="compact-toggle-row">
-                  <label><input type="radio" name="inputMode" checked /> Files</label>
-                  <label><input type="radio" name="inputMode" /> Folder</label>
                 </div>
               </div>
               <div class="drop-zone simple-drop large-drop">
@@ -366,6 +366,24 @@
 
       </div>
     </section>
+
+    <div id="aboutModal" class="modal-overlay" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+        <header class="modal-header">
+          <h2 id="aboutTitle">PNG2JPEG</h2>
+          <button id="aboutCloseBtn" class="ghost" aria-label="Close">✕</button>
+        </header>
+        <div class="modal-body">
+          <p><strong>Version:</strong> <span id="aboutVersion">—</span></p>
+          <p>Convert PNG to JPEG with EXIF metadata, then browse, edit, and inspect images in the Metadata Viewer / Editor.</p>
+          <p class="muted">Bundled with ImageMagick &amp; ExifTool. Author: Valentinno Cruz.</p>
+          <div class="modal-actions">
+            <button id="aboutOpenRepoBtn">View on GitHub</button>
+            <button id="aboutCloseBtn2" class="ghost">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script src="renderer.js"></script>

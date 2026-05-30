@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fsp = require('fs/promises');
 const { spawn, spawnSync } = require('child_process');
@@ -541,6 +541,21 @@ function buildEditorRows(metadataRows) {
     ResolutionUnit: normalizeMetadataValue(row.ResolutionUnit)
   }));
 }
+
+ipcMain.handle('get-app-version', () => app.getVersion());
+
+ipcMain.handle('open-path', async (_, target) => {
+  if (!target) return { ok: false, error: 'No path provided.' };
+  const err = await shell.openPath(target);
+  if (err) return { ok: false, error: err };
+  return { ok: true };
+});
+
+ipcMain.handle('open-external', async (_, url) => {
+  if (!url) return { ok: false };
+  await shell.openExternal(url);
+  return { ok: true };
+});
 
 ipcMain.handle('check-dependencies', async () => {
   const magick = resolveTool('magick', ['-version']);
