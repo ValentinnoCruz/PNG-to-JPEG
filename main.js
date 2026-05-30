@@ -578,6 +578,18 @@ function buildEditorRows(metadataRows) {
 
 ipcMain.handle('get-app-version', () => app.getVersion());
 
+ipcMain.handle('save-text-file', async (_, payload) => {
+  const opts = payload || {};
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: opts.title || 'Save file',
+    defaultPath: opts.defaultPath || '',
+    filters: opts.filters || [{ name: 'All Files', extensions: ['*'] }]
+  });
+  if (result.canceled || !result.filePath) return { canceled: true, filePath: '' };
+  await fsp.writeFile(result.filePath, String(opts.content ?? ''), 'utf8');
+  return { canceled: false, filePath: result.filePath };
+});
+
 ipcMain.handle('open-path', async (_, target) => {
   if (!target) return { ok: false, error: 'No path provided.' };
   const err = await shell.openPath(target);
@@ -749,37 +761,22 @@ ipcMain.handle('apply-metadata-edits', async (_, payload) => {
   const configPath = await getExifToolConfigPath();
   if (!configPath) throw new Error('Missing exiftool_config. This file is required to write the project XMP tags.');
 
-  const files = Array.isArray(payload.files) ? payload.files.filter(isImage) : [];
-  const rawProjectEdits = payload.projectEdits || payload.edits || {};
-  const rawAdvancedEdits = payload.advancedEdits || {};
-  const projectEdits = {};
-  const advancedEdits = {};
+  const coerce = (rawProject, rawAdvanced) => {
+    const projectEdits = {};
+    const advancedEdits = {};
+    for (const tag of DEFAULT_PROJECT_TAGS) {
+      let value = normalizeMetadataValue(rawProject[tag]);
+      if (tag === 'Timestamp') value = normalizeProjectTimestampForJpeg(value);
+      if (value) projectEdits[tag] = value;
+    }
+    for (const tag of DEFAULT_ADVANCED_TAGS) {
+      const value = normalizeMetadataValue(rawAdvanced[tag]);
+      if (value) advancedEdits[tag] = value;
+    }
+    return { projectEdits, advancedEdits };
+  };
 
-  for (const tag of DEFAULT_PROJECT_TAGS) {
-    let value = normalizeMetadataValue(rawProjectEdits[tag]);
-    if (tag === 'Timestamp') value = normalizeProjectTimestampForJpeg(value);
-    if (value) projectEdits[tag] = value;
-  }
-
-  for (const tag of DEFAULT_ADVANCED_TAGS) {
-    const value = normalizeMetadataValue(rawAdvancedEdits[tag]);
-    if (value) advancedEdits[tag] = value;
-  }
-
-  if (!files.length) throw new Error('No images selected for metadata editing.');
-  if (!Object.keys(projectEdits).length && !Object.keys(advancedEdits).length) {
-    throw new Error('No non-empty metadata fields were provided.');
-  }
-
-  const rows = [];
-  const reportStamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const reportDir = path.join(path.dirname(files[0]), `_metadata_edit_report_${reportStamp}`);
-  const backupDir = path.join(reportDir, 'backups');
-  await fsp.mkdir(reportDir, { recursive: true });
-  if (payload.backupBeforeEdit !== false) await fsp.mkdir(backupDir, { recursive: true });
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
+  const processFile = async (file, projectEdits, advancedEdits, idx, backupDir, doBackup, syncDates) => {
     const row = {
       File: file,
       Status: 'Unknown',
@@ -789,26 +786,22 @@ ipcMain.handle('apply-metadata-edits', async (_, payload) => {
       DateSyncStatus: '',
       Error: ''
     };
-
     try {
-      if (payload.backupBeforeEdit !== false) {
-        const safeName = `${String(i + 1).padStart(4, '0')}_${path.basename(file)}`;
+      if (doBackup) {
+        const safeName = `${String(idx + 1).padStart(4, '0')}_${path.basename(file)}`;
         const backupFile = path.join(backupDir, safeName);
         await fsp.copyFile(file, backupFile);
         row.BackupFile = backupFile;
       }
-
       if (Object.keys(projectEdits).length) {
         const args = buildXmpWriteArgs(projectEdits, configPath, file);
         await runCommand(resolvedExifTool, args);
       }
-
       if (Object.keys(advancedEdits).length) {
         const args = buildAdvancedExifWriteArgs(advancedEdits, file);
         if (args.length) await runCommand(resolvedExifTool, args);
       }
-
-      if (projectEdits.Timestamp && payload.syncExifDates) {
+      if (projectEdits.Timestamp && syncDates) {
         const { args: dateArgs, parsed } = buildExifDateSyncArgs(projectEdits, file);
         if (parsed && dateArgs.length) {
           await runCommand(resolvedExifTool, dateArgs);
@@ -819,14 +812,61 @@ ipcMain.handle('apply-metadata-edits', async (_, payload) => {
       } else if (projectEdits.Timestamp) {
         row.DateSyncStatus = 'Timestamp edited; EXIF date sync skipped by user setting';
       }
-
       row.Status = 'Updated';
     } catch (error) {
       row.Status = 'Failed';
       row.Error = error.message;
     }
+    return row;
+  };
 
-    rows.push(row);
+  const doBackup = payload.backupBeforeEdit !== false;
+  const syncDates = !!payload.syncExifDates;
+
+  // Per-file edits mode (used by Find & Replace)
+  if (Array.isArray(payload.fileEdits) && payload.fileEdits.length) {
+    const valid = payload.fileEdits.filter((fe) => fe && isImage(fe.file));
+    if (!valid.length) throw new Error('No images selected for metadata editing.');
+
+    const reportStamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const reportDir = path.join(path.dirname(valid[0].file), `_metadata_edit_report_${reportStamp}`);
+    const backupDir = path.join(reportDir, 'backups');
+    await fsp.mkdir(reportDir, { recursive: true });
+    if (doBackup) await fsp.mkdir(backupDir, { recursive: true });
+
+    const rows = [];
+    for (let i = 0; i < valid.length; i++) {
+      const fe = valid[i];
+      const { projectEdits, advancedEdits } = coerce(fe.projectEdits || {}, fe.advancedEdits || {});
+      if (!Object.keys(projectEdits).length && !Object.keys(advancedEdits).length) {
+        rows.push({ File: fe.file, Status: 'Skipped', ProjectFieldsUpdated: '', AdvancedFieldsUpdated: '', BackupFile: '', DateSyncStatus: '', Error: 'No non-empty fields' });
+        continue;
+      }
+      rows.push(await processFile(fe.file, projectEdits, advancedEdits, i, backupDir, doBackup, syncDates));
+    }
+    const reportPath = path.join(reportDir, 'metadata_edit_report.csv');
+    await fsp.writeFile(reportPath, toCsv(rows), 'utf8');
+    return { reportPath, reportDir, rows };
+  }
+
+  // Uniform-edits mode (existing behavior)
+  const files = Array.isArray(payload.files) ? payload.files.filter(isImage) : [];
+  const { projectEdits, advancedEdits } = coerce(payload.projectEdits || payload.edits || {}, payload.advancedEdits || {});
+
+  if (!files.length) throw new Error('No images selected for metadata editing.');
+  if (!Object.keys(projectEdits).length && !Object.keys(advancedEdits).length) {
+    throw new Error('No non-empty metadata fields were provided.');
+  }
+
+  const reportStamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const reportDir = path.join(path.dirname(files[0]), `_metadata_edit_report_${reportStamp}`);
+  const backupDir = path.join(reportDir, 'backups');
+  await fsp.mkdir(reportDir, { recursive: true });
+  if (doBackup) await fsp.mkdir(backupDir, { recursive: true });
+
+  const rows = [];
+  for (let i = 0; i < files.length; i++) {
+    rows.push(await processFile(files[i], projectEdits, advancedEdits, i, backupDir, doBackup, syncDates));
   }
 
   const reportPath = path.join(reportDir, 'metadata_edit_report.csv');

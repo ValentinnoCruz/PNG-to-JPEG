@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PNG2JPEG v4.8.3</title>
+  <title>PNG2JPEG v4.9.0</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-icon">▣</span><span>PNG2JPEG v4.8.3</span></div>
+      <div class="brand"><span class="brand-icon">▣</span><span>PNG2JPEG v4.9.0</span></div>
       <nav class="top-tabs">
         <button id="convertTabBtn" class="top-tab active">PNG to JPEG Converter</button>
         <button id="editorTabBtn" class="top-tab">Metadata Viewer / Editor</button>
@@ -223,6 +223,7 @@
               </div>
               <span class="rowcount muted" id="browseRowCount">0 rows</span>
               <span class="toolbar-spacer"></span>
+              <button id="exportCsvBtn" title="Export current visible columns and rows to CSV">⤓ Export CSV</button>
               <button id="clearSelectionBtn">Clear Selection</button>
               <button id="bulkEditSelectedBtn" class="primary">✎ Edit Selected (<span id="bulkEditCount">0</span>)</button>
             </div>
@@ -273,6 +274,7 @@
               <div class="sub-tabs">
                 <button class="sub-tab active" data-subtab="projectEditPanel" type="button">Project Fields</button>
                 <button class="sub-tab" data-subtab="advancedEditPanel" type="button">Advanced</button>
+                <button class="sub-tab" data-subtab="findReplacePanel" type="button">Find &amp; Replace</button>
               </div>
 
               <section id="projectEditPanel" class="sub-panel active">
@@ -307,6 +309,33 @@
                   <label class="editable-field"><input class="edit-check" data-kind="advanced" data-tag="YResolution" id="checkYResolution" type="checkbox" /><span>YResolution</span><input id="editYResolution" type="text" placeholder="72" /></label>
                   <label class="editable-field"><input class="edit-check" data-kind="advanced" data-tag="ResolutionUnit" id="checkResolutionUnit" type="checkbox" /><span>ResolutionUnit</span><input id="editResolutionUnit" type="text" placeholder="inches" /></label>
                 </div>
+              </section>
+
+              <section id="findReplacePanel" class="sub-panel">
+                <p class="hint">Replace text inside a single field across the rows you have selected (or all loaded rows if none are checked). Backups still respect the toggle below.</p>
+                <div class="fr-grid">
+                  <label class="fr-field"><span>Field</span>
+                    <select id="frFieldSelect"></select>
+                  </label>
+                  <label class="fr-field"><span>Find</span>
+                    <input id="frFindInput" type="text" placeholder="text to find" />
+                  </label>
+                  <label class="fr-field"><span>Replace with</span>
+                    <input id="frReplaceInput" type="text" placeholder="replacement text (empty = delete match)" />
+                  </label>
+                  <label class="fr-field fr-mode"><span>Match</span>
+                    <select id="frModeSelect">
+                      <option value="substring">Contains (substring)</option>
+                      <option value="exact">Equals whole value</option>
+                    </select>
+                  </label>
+                  <label class="fr-check"><input id="frCaseInput" type="checkbox" /> Case sensitive</label>
+                </div>
+                <div class="fr-actions">
+                  <button id="frPreviewBtn" type="button">Preview matches</button>
+                  <button id="frApplyBtn" class="primary" type="button">▶ Apply Find &amp; Replace</button>
+                </div>
+                <div id="frPreviewOut" class="fr-preview muted">No preview yet.</div>
               </section>
 
               <div class="sticky-apply">

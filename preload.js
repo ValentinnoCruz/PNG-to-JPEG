@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('converterApi', {
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   openPath: (target) => ipcRenderer.invoke('open-path', target),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
+  saveTextFile: (payload) => ipcRenderer.invoke('save-text-file', payload),
 
   onProgress: (callback) => {
     const listener = (_, payload) => callback(payload);

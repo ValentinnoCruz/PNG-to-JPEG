@@ -14,7 +14,9 @@ const editorState = {
   viewMode: 'project',
   fullMetadata: [],
   mode: 'browse',
-  customColumns: null
+  customColumns: null,
+  sortKey: null,
+  sortDir: 'asc'
 };
 
 const PROJECT_TAGS = [
@@ -341,16 +343,64 @@ function updateApplyCount() {
 
 function getVisibleRows() {
   const query = metadataSearchInput.value.trim().toLowerCase();
-  if (!query) return editorState.rows;
-  return editorState.rows.filter((row) => {
-    const values = [row.FileName, row.Timestamp, row.Location, row.CameraTableLocation, row.ImagingDevice, row.CameraType, row.Make, row.Model, row.Software];
-    return values.some((value) => String(value || '').toLowerCase().includes(query));
-  });
+  const cols = getActiveColumns();
+  const colKeys = cols.map(([k]) => k);
+
+  let rows = editorState.rows;
+  if (query) {
+    rows = rows.filter((row) => {
+      // FileName is always shown implicitly via filename column or rail; include it always.
+      if (String(row.FileName || '').toLowerCase().includes(query)) return true;
+      return colKeys.some((key) => String(row[key] ?? '').toLowerCase().includes(query));
+    });
+  }
+
+  if (editorState.sortKey && colKeys.includes(editorState.sortKey)) {
+    const key = editorState.sortKey;
+    const dir = editorState.sortDir === 'desc' ? -1 : 1;
+    rows = rows.slice().sort((a, b) => {
+      const av = a[key];
+      const bv = b[key];
+      const aEmpty = av == null || av === '';
+      const bEmpty = bv == null || bv === '';
+      if (aEmpty && bEmpty) return 0;
+      if (aEmpty) return 1;  // empties sink to bottom regardless of direction
+      if (bEmpty) return -1;
+      const aNum = Number(av);
+      const bNum = Number(bv);
+      if (!Number.isNaN(aNum) && !Number.isNaN(bNum) && av !== '' && bv !== '') {
+        return (aNum - bNum) * dir;
+      }
+      return String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: 'base' }) * dir;
+    });
+  }
+  return rows;
 }
 
 function renderMetadataTable() {
   const columns = getActiveColumns();
-  metadataTableHead.innerHTML = `<tr><th><input id="selectAllVisible" type="checkbox" /></th>${columns.map(([, label]) => `<th>${label}</th>`).join('')}</tr>`;
+  const sortKey = editorState.sortKey;
+  const sortDir = editorState.sortDir;
+  const headerCells = columns.map(([key, label]) => {
+    const isSorted = sortKey === key;
+    const arrow = isSorted ? (sortDir === 'desc' ? '▼' : '▲') : '↕';
+    const cls = `sortable${isSorted ? ' sorted' : ''}`;
+    return `<th class="${cls}" data-sort-key="${escapeAttr(key)}"><span class="sort-label">${label}</span> <span class="sort-arrow">${arrow}</span></th>`;
+  }).join('');
+  metadataTableHead.innerHTML = `<tr><th><input id="selectAllVisible" type="checkbox" /></th>${headerCells}</tr>`;
+
+  $$('th.sortable', metadataTableHead).forEach((th) => {
+    th.addEventListener('click', () => {
+      const key = th.getAttribute('data-sort-key');
+      if (editorState.sortKey === key) {
+        editorState.sortDir = editorState.sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        editorState.sortKey = key;
+        editorState.sortDir = 'asc';
+      }
+      renderMetadataTable();
+    });
+  });
 
   const rows = getVisibleRows();
   if (browseRowCount) browseRowCount.textContent = `${rows.length} row${rows.length === 1 ? '' : 's'}`;
@@ -1035,6 +1085,140 @@ document.addEventListener('keydown', (e) => {
   if (k === 'b') setEditorMode('browse');
   else if (k === 'e') setEditorMode('edit');
   else if (k === 'i') setEditorMode('inspect');
+});
+
+// === v4.9.0: Export CSV ===
+const exportCsvBtn = $('exportCsvBtn');
+
+function csvEscapeCell(value) {
+  const s = value == null ? '' : String(value);
+  if (/[",\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+if (exportCsvBtn) exportCsvBtn.addEventListener('click', async () => {
+  const cols = getActiveColumns();
+  const rows = getVisibleRows();
+  if (!rows.length) return editorLog('Nothing to export — no rows visible.');
+
+  const header = ['FilePath', ...cols.map(([, label]) => label)];
+  const lines = [header.map(csvEscapeCell).join(',')];
+  for (const row of rows) {
+    const cells = [row.FilePath, ...cols.map(([key]) => row[key] ?? '')];
+    lines.push(cells.map(csvEscapeCell).join(','));
+  }
+  const content = lines.join('\r\n') + '\r\n';
+
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  try {
+    const result = await window.converterApi.saveTextFile({
+      title: 'Export Browse table to CSV',
+      defaultPath: `browse_export_${stamp}.csv`,
+      filters: [{ name: 'CSV', extensions: ['csv'] }],
+      content
+    });
+    if (result.canceled) return editorLog('CSV export canceled.');
+    editorLog(`Exported ${rows.length} row(s) to ${result.filePath}`);
+  } catch (err) {
+    editorLog(`CSV export failed: ${err.message}`);
+  }
+});
+
+// === v4.9.0: Find & Replace ===
+const frFieldSelect = $('frFieldSelect');
+const frFindInput = $('frFindInput');
+const frReplaceInput = $('frReplaceInput');
+const frModeSelect = $('frModeSelect');
+const frCaseInput = $('frCaseInput');
+const frPreviewBtn = $('frPreviewBtn');
+const frApplyBtn = $('frApplyBtn');
+const frPreviewOut = $('frPreviewOut');
+
+function populateFindReplaceFields() {
+  if (!frFieldSelect) return;
+  const groups = [
+    ['Project fields', PROJECT_TAGS],
+    ['Advanced / EXIF', ADVANCED_TAGS]
+  ];
+  frFieldSelect.innerHTML = groups.map(([label, tags]) =>
+    `<optgroup label="${label}">${tags.map((t) => `<option value="${t}">${t}</option>`).join('')}</optgroup>`
+  ).join('');
+}
+populateFindReplaceFields();
+
+function computeFindReplaceMatches() {
+  const field = frFieldSelect?.value || '';
+  const findStr = frFindInput?.value ?? '';
+  const replaceStr = frReplaceInput?.value ?? '';
+  const mode = frModeSelect?.value || 'substring';
+  const caseSensitive = !!frCaseInput?.checked;
+  if (!field) return { error: 'Pick a field first.' };
+  if (!findStr) return { error: 'Provide a value in Find.' };
+
+  const targetSet = editorState.checkedFiles.size ? new Set(editorState.checkedFiles) : null;
+  const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const matches = [];
+  for (const row of editorState.rows) {
+    if (targetSet && !targetSet.has(row.FilePath)) continue;
+    const oldVal = String(row[field] ?? '');
+    const hay = caseSensitive ? oldVal : oldVal.toLowerCase();
+    const needle = caseSensitive ? findStr : findStr.toLowerCase();
+    let newVal;
+    if (mode === 'exact') {
+      if (hay !== needle) continue;
+      newVal = replaceStr;
+    } else {
+      if (!hay.includes(needle)) continue;
+      const re = new RegExp(escapeRe(findStr), caseSensitive ? 'g' : 'gi');
+      newVal = oldVal.replace(re, replaceStr);
+    }
+    if (newVal === oldVal) continue;
+    matches.push({ file: row.FilePath, fileName: row.FileName, oldVal, newVal });
+  }
+  return { field, matches };
+}
+
+if (frPreviewBtn) frPreviewBtn.addEventListener('click', () => {
+  const result = computeFindReplaceMatches();
+  if (result.error) { frPreviewOut.textContent = result.error; return; }
+  if (!result.matches.length) { frPreviewOut.textContent = 'No matches.'; return; }
+  const sample = result.matches.slice(0, 25).map((m) => `${m.fileName}: "${m.oldVal}" \u2192 "${m.newVal}"`).join('\n');
+  const more = result.matches.length > 25 ? `\n\u2026 and ${result.matches.length - 25} more` : '';
+  frPreviewOut.textContent = `${result.matches.length} row(s) will change (field: ${result.field}):\n${sample}${more}`;
+});
+
+if (frApplyBtn) frApplyBtn.addEventListener('click', async () => {
+  const result = computeFindReplaceMatches();
+  if (result.error) return editorLog(result.error);
+  if (!result.matches.length) return editorLog('No matches for find & replace.');
+
+  const field = result.field;
+  const isProject = PROJECT_TAGS.includes(field);
+  const confirmed = confirm(`Replace in ${result.matches.length} file(s) — field "${field}".\n\nProceed?`);
+  if (!confirmed) return;
+
+  const fileEdits = result.matches.map((m) => ({
+    file: m.file,
+    projectEdits: isProject ? { [field]: m.newVal } : {},
+    advancedEdits: isProject ? {} : { [field]: m.newVal }
+  }));
+
+  frApplyBtn.disabled = true;
+  try {
+    const apiResult = await window.converterApi.applyMetadataEdits({
+      fileEdits,
+      syncExifDates: editorSyncExifDatesInput.checked,
+      backupBeforeEdit: editorBackupInput.checked
+    });
+    editorLog(`Find & Replace applied to ${result.matches.length} file(s). Report: ${apiResult.reportPath}`);
+    frPreviewOut.textContent = `Applied to ${result.matches.length} file(s). Report: ${apiResult.reportPath}`;
+    await loadEditorMetadata();
+  } catch (err) {
+    editorLog(`Find & Replace failed: ${err.message}`);
+  } finally {
+    frApplyBtn.disabled = false;
+  }
 });
 
 renderMetadataTable();
