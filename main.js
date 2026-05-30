@@ -202,32 +202,66 @@ function isImage(filePath) {
   return isPng(filePath) || isJpeg(filePath);
 }
 
-async function walkForImages(folderPath, recursive = true) {
+async function walkForImages(folderPath, recursive = true, skipped = []) {
   const found = [];
-  const entries = await fsp.readdir(folderPath, { withFileTypes: true });
+  let entries;
+  try {
+    entries = await fsp.readdir(folderPath, { withFileTypes: true });
+  } catch (err) {
+    skipped.push({ path: folderPath, error: err.code || err.message });
+    return found;
+  }
 
   for (const entry of entries) {
     const fullPath = path.join(folderPath, entry.name);
-    if (entry.isDirectory() && recursive) {
-      found.push(...await walkForImages(fullPath, recursive));
-    } else if (entry.isFile() && isImage(fullPath)) {
-      found.push(fullPath);
+    try {
+      if (entry.isDirectory() && recursive) {
+        found.push(...await walkForImages(fullPath, recursive, skipped));
+      } else if (entry.isFile() && isImage(fullPath)) {
+        found.push(fullPath);
+      } else if (entry.isSymbolicLink() && recursive) {
+        const stat = await fsp.stat(fullPath).catch(() => null);
+        if (stat && stat.isDirectory()) {
+          found.push(...await walkForImages(fullPath, recursive, skipped));
+        } else if (stat && stat.isFile() && isImage(fullPath)) {
+          found.push(fullPath);
+        }
+      }
+    } catch (err) {
+      skipped.push({ path: fullPath, error: err.code || err.message });
     }
   }
 
   return found;
 }
 
-async function walkForPngs(folderPath, recursive = true) {
+async function walkForPngs(folderPath, recursive = true, skipped = []) {
   const found = [];
-  const entries = await fsp.readdir(folderPath, { withFileTypes: true });
+  let entries;
+  try {
+    entries = await fsp.readdir(folderPath, { withFileTypes: true });
+  } catch (err) {
+    skipped.push({ path: folderPath, error: err.code || err.message });
+    return found;
+  }
 
   for (const entry of entries) {
     const fullPath = path.join(folderPath, entry.name);
-    if (entry.isDirectory() && recursive) {
-      found.push(...await walkForPngs(fullPath, recursive));
-    } else if (entry.isFile() && isPng(fullPath)) {
-      found.push(fullPath);
+    try {
+      if (entry.isDirectory() && recursive) {
+        found.push(...await walkForPngs(fullPath, recursive, skipped));
+      } else if (entry.isFile() && isPng(fullPath)) {
+        found.push(fullPath);
+      } else if (entry.isSymbolicLink() && recursive) {
+        const stat = await fsp.stat(fullPath).catch(() => null);
+        if (stat && stat.isDirectory()) {
+          found.push(...await walkForPngs(fullPath, recursive, skipped));
+        } else if (stat && stat.isFile() && isPng(fullPath)) {
+          found.push(fullPath);
+        }
+      }
+    } catch (err) {
+      skipped.push({ path: fullPath, error: err.code || err.message });
     }
   }
 
@@ -605,11 +639,12 @@ ipcMain.handle('select-png-folder', async (_, recursive) => {
     properties: ['openDirectory']
   });
 
-  if (result.canceled || !result.filePaths.length) return { canceled: true, files: [], sourceRoot: '' };
+  if (result.canceled || !result.filePaths.length) return { canceled: true, files: [], sourceRoot: '', skipped: [] };
 
   const sourceRoot = result.filePaths[0];
-  const files = await walkForPngs(sourceRoot, recursive);
-  return { canceled: false, files, sourceRoot };
+  const skipped = [];
+  const files = await walkForPngs(sourceRoot, recursive, skipped);
+  return { canceled: false, files, sourceRoot, skipped };
 });
 
 ipcMain.handle('select-template-jpeg', async () => {
@@ -658,11 +693,12 @@ ipcMain.handle('select-image-folder', async (_, recursive) => {
     properties: ['openDirectory']
   });
 
-  if (result.canceled || !result.filePaths.length) return { canceled: true, files: [], sourceRoot: '' };
+  if (result.canceled || !result.filePaths.length) return { canceled: true, files: [], sourceRoot: '', skipped: [] };
 
   const sourceRoot = result.filePaths[0];
-  const files = await walkForImages(sourceRoot, recursive);
-  return { canceled: false, files, sourceRoot };
+  const skipped = [];
+  const files = await walkForImages(sourceRoot, recursive, skipped);
+  return { canceled: false, files, sourceRoot, skipped };
 });
 
 ipcMain.handle('read-image-metadata', async (_, files) => {
