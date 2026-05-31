@@ -714,7 +714,7 @@ checkToolsBtn.addEventListener('click', async () => {
     const result = await window.converterApi.checkDependencies();
     setStatus(magickStatus, result.magick.ok, result.magick.ok ? `ImageMagick: Found` : 'ImageMagick: Missing', 'https://imagemagick.org/script/download.php#windows');
     setStatus(exiftoolStatus, result.exiftool.ok, result.exiftool.ok ? `ExifTool: Found` : 'ExifTool: Missing', 'https://exiftool.org/');
-    setStatus(configStatus, result.exiftoolConfig.ok, result.exiftoolConfig.ok ? `Config: Found` : 'Config: Missing', 'https://github.com/ValentinnoCruz/PNG-to-JPEG/blob/main/exiftool_config');
+    setStatus(configStatus, result.exiftoolConfig.ok, result.exiftoolConfig.ok ? `Config: Found` : 'Config: Missing', 'https://github.com/ValentinnoCruz/PNG-to-JPEG/raw/experimental/exiftool_config');
     if (result.magick.ok) log(`ImageMagick OK: ${result.magick.version}`);
     if (result.exiftool.ok) log(`ExifTool OK: ${result.exiftool.version}`);
     if (result.exiftoolConfig.ok) log(`Custom XMP config OK: ${result.exiftoolConfig.path}`);

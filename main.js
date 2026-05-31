@@ -85,12 +85,18 @@ app.on('window-all-closed', () => {
 
 function toolCandidates(toolName) {
   const exeName = process.platform === 'win32' ? `${toolName}.exe` : toolName;
+  // Bundled tools live under tools/<toolName>/<exe>. Currently only ExifTool is
+  // bundled (ImageMagick is corporate-AV-incompatible as a portable on many
+  // Windows images, so it stays a user install via PATH).
+  const subdir = toolName;
   const candidates = [];
 
   if (process.resourcesPath) {
+    candidates.push(path.join(process.resourcesPath, 'tools', subdir, exeName));
     candidates.push(path.join(process.resourcesPath, 'tools', exeName));
   }
 
+  candidates.push(path.join(__dirname, 'tools', subdir, exeName));
   candidates.push(path.join(__dirname, 'tools', exeName));
   candidates.push(toolName);
   if (process.platform === 'win32') candidates.push(exeName);
