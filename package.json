@@ -1,12 +1,14 @@
 {
   "name": "png-to-jpeg-metadata-converter",
-  "version": "4.9.1",
+  "version": "4.10.0",
   "description": "Offline PNG to JPEG converter with real JPEG template emulation plus safe project metadata viewer/bulk editor. v4.8 redesigns the Editor tab as a Browse / Edit / Inspect mode switcher with a preview rail, smart column picker, and double-click-to-edit row interaction.",
   "main": "main.js",
   "author": "Val Cruz",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win nsis",
+    "fetch-tools": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fetch-tools.ps1",
+    "dist": "npm run fetch-tools && electron-builder --win nsis",
+    "dist:nofetch": "electron-builder --win nsis",
     "pack": "electron-builder --dir"
   },
   "devDependencies": {
@@ -14,7 +16,7 @@
     "electron-builder": "^26.0.0"
   },
   "build": {
-    "appId": "com.valcruz.pngjpegmetadata.v4_9",
+    "appId": "com.valcruz.pngjpegmetadata.v4_10",
     "productName": "PNG2JPEG",
     "directories": {
       "output": "dist"

@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PNG2JPEG v4.9.1</title>
+  <title>PNG2JPEG v4.10.0</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-icon">▣</span><span>PNG2JPEG v4.9.1</span></div>
+      <div class="brand"><span class="brand-icon">▣</span><span>PNG2JPEG v4.10.0</span></div>
       <nav class="top-tabs">
         <button id="convertTabBtn" class="top-tab active">PNG to JPEG Converter</button>
         <button id="editorTabBtn" class="top-tab">Metadata Viewer / Editor</button>
@@ -404,33 +404,34 @@
           <button id="setupCloseBtn" class="ghost" aria-label="Close">✕</button>
         </header>
         <div class="modal-body setup-body">
-          <p>PNG2JPEG needs three things on your system to run:</p>
+          <p><strong>If you installed PNG2JPEG via the official installer, you only need to install ImageMagick yourself</strong> &mdash; ExifTool and the config file are bundled with the app. These instructions cover the one manual dependency plus a recap of what ships in the box.</p>
+          <p>PNG2JPEG depends on three things:</p>
 
           <ol class="setup-steps">
             <li>
-              <h3>1. ImageMagick <span class="muted">— used for the actual PNG → JPEG conversion</span></h3>
+              <h3>1. ImageMagick <span class="muted">— the one dependency you install yourself</span></h3>
               <ul>
                 <li>Download the Windows installer: <a href="https://imagemagick.org/script/download.php#windows" data-external>imagemagick.org/script/download.php</a></li>
                 <li>Pick the <strong>Q16, x64, dynamic</strong> installer (recommended).</li>
                 <li>During install, <strong>tick &ldquo;Install legacy utilities&rdquo;</strong> and <strong>&ldquo;Add application directory to your system path&rdquo;</strong>.</li>
                 <li>Verify in PowerShell: <code>magick -version</code></li>
+                <li class="muted">Why not bundled? The portable build is silently blocked by many corporate EDR/AV products. The signed installer goes through the proper approval path and works reliably.</li>
               </ul>
             </li>
             <li>
-              <h3>2. ExifTool <span class="muted">— used to read and write image metadata</span></h3>
+              <h3>2. ExifTool <span class="muted">— bundled with the installer (nothing to do)</span></h3>
               <ul>
-                <li>Download the Windows EXE bundle: <a href="https://exiftool.org/" data-external>exiftool.org</a></li>
-                <li>Unzip it, then <strong>rename <code>exiftool(-k).exe</code> to <code>exiftool.exe</code></strong>.</li>
-                <li>Drop <code>exiftool.exe</code> into a folder that is on your PATH (e.g. <code>C:\Windows</code>) <em>or</em> into this app&rsquo;s <code>tools\</code> folder next to <code>main.js</code>.</li>
-                <li>Verify in PowerShell: <code>exiftool -ver</code></li>
+                <li>Ships under <code>resources\tools\exiftool\exiftool.exe</code>.</li>
+                <li>If you cloned the repo for development, run <code>npm run fetch-tools</code> once to populate <code>tools\exiftool\</code>.</li>
+                <li>Verify in PowerShell: <code>exiftool -ver</code> (only needed if the dependency check shows red)</li>
               </ul>
             </li>
             <li>
-              <h3>3. exiftool_config <span class="muted">— defines the custom XMP-Sprout project tags</span></h3>
+              <h3>3. exiftool_config <span class="muted">— bundled with the installer (nothing to do)</span></h3>
               <ul>
-                <li>Grab the file from the repo: <a href="https://github.com/ValentinnoCruz/PNG-to-JPEG/blob/main/exiftool_config" data-external>github.com/ValentinnoCruz/PNG-to-JPEG &mdash; exiftool_config</a></li>
-                <li>Place it in the <strong>same folder as <code>main.js</code></strong>, OR in the app&rsquo;s working directory at runtime.</li>
-                <li>The Check Dependencies status box will turn green once it&rsquo;s found.</li>
+                <li>Defines the custom XMP-Sprout project tags (<code>Location-index</code>, <code>CameraType</code>, <code>PtzParameters</code>, etc.).</li>
+                <li>Ships at the app root next to <code>main.js</code> and under <code>resources\exiftool_config</code>.</li>
+                <li>If you need to grab it manually: <a href="https://github.com/ValentinnoCruz/PNG-to-JPEG/raw/experimental/exiftool_config" data-external>raw download from the repo</a></li>
               </ul>
             </li>
           </ol>
@@ -441,8 +442,8 @@
           <h3>Common gotchas</h3>
           <ul class="setup-gotchas">
             <li><strong>&ldquo;magick is not recognized&rdquo;</strong> — you forgot to tick the PATH option during ImageMagick install. Re-run the installer and check that box, or add the install folder to your PATH manually.</li>
-            <li><strong>ExifTool found but Config missing</strong> — <code>exiftool_config</code> must sit next to <code>main.js</code> (it is bundled with the installer; if you cloned the repo, copy it yourself).</li>
-            <li><strong>Antivirus blocks <code>exiftool.exe</code></strong> — whitelist the file. ExifTool is a well-known open-source utility but is occasionally flagged.</li>
+            <li><strong>ExifTool status is red on a dev clone</strong> &mdash; run <code>npm run fetch-tools</code> to populate <code>tools\exiftool\</code>.</li>
+            <li><strong>Antivirus blocks bundled <code>exiftool.exe</code></strong> &mdash; whitelist the file under the app&rsquo;s install folder. ExifTool is a well-known open-source utility but is occasionally flagged.</li>
           </ul>
 
           <div class="modal-actions">
