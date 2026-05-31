@@ -280,9 +280,32 @@ function updateJobSummary() {
   }
 }
 
-function setStatus(element, ok, text) {
+function setStatus(element, ok, text, helpUrl) {
   element.className = `status-box ${ok ? 'ok' : 'bad'}`;
   element.textContent = text;
+  if (!ok && helpUrl) {
+    element.appendChild(document.createTextNode(' — '));
+    const a = document.createElement('a');
+    a.href = '#';
+    a.className = 'status-link';
+    a.textContent = 'Get it';
+    a.title = helpUrl;
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.converterApi.openExternal(helpUrl);
+    });
+    element.appendChild(a);
+    element.appendChild(document.createTextNode(' · '));
+    const setupLink = document.createElement('a');
+    setupLink.href = '#';
+    setupLink.className = 'status-link';
+    setupLink.textContent = 'Setup help';
+    setupLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      openSetup();
+    });
+    element.appendChild(setupLink);
+  }
 }
 
 function log(message) {
@@ -689,12 +712,15 @@ checkToolsBtn.addEventListener('click', async () => {
   checkToolsBtn.disabled = true;
   try {
     const result = await window.converterApi.checkDependencies();
-    setStatus(magickStatus, result.magick.ok, result.magick.ok ? `ImageMagick: Found` : 'ImageMagick: Missing');
-    setStatus(exiftoolStatus, result.exiftool.ok, result.exiftool.ok ? `ExifTool: Found` : 'ExifTool: Missing');
-    setStatus(configStatus, result.exiftoolConfig.ok, result.exiftoolConfig.ok ? `Config: Found` : 'Config: Missing');
+    setStatus(magickStatus, result.magick.ok, result.magick.ok ? `ImageMagick: Found` : 'ImageMagick: Missing', 'https://imagemagick.org/script/download.php#windows');
+    setStatus(exiftoolStatus, result.exiftool.ok, result.exiftool.ok ? `ExifTool: Found` : 'ExifTool: Missing', 'https://exiftool.org/');
+    setStatus(configStatus, result.exiftoolConfig.ok, result.exiftoolConfig.ok ? `Config: Found` : 'Config: Missing', 'https://github.com/ValentinnoCruz/PNG-to-JPEG/blob/main/exiftool_config');
     if (result.magick.ok) log(`ImageMagick OK: ${result.magick.version}`);
     if (result.exiftool.ok) log(`ExifTool OK: ${result.exiftool.version}`);
     if (result.exiftoolConfig.ok) log(`Custom XMP config OK: ${result.exiftoolConfig.path}`);
+    if (!result.magick.ok || !result.exiftool.ok || !result.exiftoolConfig.ok) {
+      log('One or more dependencies are missing. Click "Setup help" on the red box, or use the 🛠 Setup button up top.');
+    }
   } catch (error) {
     log(`Tool check failed: ${error.message}`);
   } finally {
@@ -779,7 +805,7 @@ convertBtn.addEventListener('click', async () => {
       embedJsonBackup: embedJsonBackupInput.checked,
       syncExifDatesFromProjectTimestamp: syncExifDatesInput.checked
     });
-    progressText.textContent = `Done: ${result.successCount} clean, ${result.warningCount} warnings, ${result.failCount} failed`;
+    progressText.textContent = `Done: ${result.successCount} clean, ${result.cosmeticCount || 0} cosmetic, ${result.warningCount} warnings, ${result.failCount} failed`;
     progressFill.style.width = '100%';
     log(`Finished. Report folder: ${result.reportDir}`);
     log(`CSV report: ${result.reportPath}`);
@@ -1266,5 +1292,29 @@ document.getElementById('aboutCloseBtn2')?.addEventListener('click', closeAbout)
 document.getElementById('aboutOpenRepoBtn')?.addEventListener('click', () => {
   window.converterApi.openExternal('https://github.com/ValentinnoCruz/PNG-to-JPEG');
 });
+document.getElementById('aboutOpenSetupBtn')?.addEventListener('click', () => {
+  closeAbout();
+  openSetup();
+});
 if (aboutModal) aboutModal.addEventListener('click', (e) => { if (e.target === aboutModal) closeAbout(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && aboutModal && !aboutModal.hidden) closeAbout(); });
+
+// Setup Help modal
+const setupModal = document.getElementById('setupModal');
+const topSetupBtn = document.getElementById('topSetupBtn');
+function openSetup() { if (setupModal) setupModal.hidden = false; }
+function closeSetup() { if (setupModal) setupModal.hidden = true; }
+if (topSetupBtn) topSetupBtn.addEventListener('click', openSetup);
+document.getElementById('setupCloseBtn')?.addEventListener('click', closeSetup);
+document.getElementById('setupCloseBtn2')?.addEventListener('click', closeSetup);
+if (setupModal) {
+  setupModal.addEventListener('click', (e) => { if (e.target === setupModal) closeSetup(); });
+  // Intercept any external links in the setup body so they open in the user's browser, not Electron
+  setupModal.querySelectorAll('a[data-external]').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.converterApi.openExternal(a.getAttribute('href'));
+    });
+  });
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && setupModal && !setupModal.hidden) closeSetup(); });

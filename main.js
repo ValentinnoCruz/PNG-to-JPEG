@@ -420,6 +420,22 @@ function compareExactXmpTags(sourceMeta, jpegMeta, requestedTags) {
   return { exactMatches, missing, mismatched };
 }
 
+// Detects whether a Timestamp mismatch entry differs only in date-format
+// normalization (ISO `2025-02-28T11:16:11.072-0500` vs ExifTool `2025:02:28 11:16:11.072-0500`).
+// Returns false for any non-Timestamp entry or any real value difference.
+function isTimestampCosmeticOnly(entry) {
+  if (!entry || !entry.startsWith('Timestamp:')) return false;
+  const values = [...entry.matchAll(/'([^']*)'/g)].map((m) => m[1]).filter(Boolean);
+  if (values.length < 2) return false;
+  const canonical = (s) => {
+    const m = s.match(/^(\d{4})[-:](\d{2})[-:](\d{2})[T ](.+)$/);
+    return m ? `${m[1]}:${m[2]}:${m[3]} ${m[4]}` : null;
+  };
+  const canons = values.map(canonical);
+  if (canons.some((c) => c === null)) return false;
+  return canons.every((c) => c === canons[0]);
+}
+
 async function getDimensions(filePath) {
   const result = await runCommand(resolvedMagick, ['identify', '-format', '%w,%h', filePath]);
   const [width, height] = result.stdout.trim().split(',').map(Number);
@@ -923,6 +939,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
 
   let successCount = 0;
   let warningCount = 0;
+  let cosmeticCount = 0;
   let failCount = 0;
 
   for (let i = 0; i < files.length; i++) {
@@ -1099,10 +1116,23 @@ ipcMain.handle('start-conversion', async (event, options) => {
       await fsp.writeFile(path.join(dumpsDir, `${unique}_output_jpg_metadata_G1.txt`), await getMetadataTextWithFamily1(destinationFile), 'utf8');
       await fsp.writeFile(path.join(dumpsDir, `${unique}_embedded_metadata.json`), JSON.stringify(embeddedPayload, null, 2), 'utf8');
 
-      const hasWarnings = row.DimensionsMatch !== 'Yes' || row.MissingIndividualXmpTags || row.MismatchedIndividualXmpTags || row.MissingFromJpegOverall || row.MismatchedFieldsOverall;
+      const realXmpMismatches = exactXmp.mismatched.filter((m) => !isTimestampCosmeticOnly(m));
+      const realOverallMismatches = overallTagResult.mismatched.filter((m) => !isTimestampCosmeticOnly(m));
+      const cosmeticOnly = (exactXmp.mismatched.length + overallTagResult.mismatched.length) > 0
+        && exactXmp.mismatched.every(isTimestampCosmeticOnly)
+        && overallTagResult.mismatched.every(isTimestampCosmeticOnly);
+
+      const hasWarnings = row.DimensionsMatch !== 'Yes'
+        || row.MissingIndividualXmpTags
+        || realXmpMismatches.length > 0
+        || row.MissingFromJpegOverall
+        || realOverallMismatches.length > 0;
       if (hasWarnings) {
         row.Status = 'Converted with warnings';
         warningCount++;
+      } else if (cosmeticOnly) {
+        row.Status = 'Converted (cosmetic differences only)';
+        cosmeticCount++;
       } else {
         row.Status = 'Converted and verified';
         successCount++;
@@ -1113,7 +1143,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
         total: files.length,
         file: sourceFile,
         message: `${row.Status}: ${fileLabel}`,
-        level: row.Status === 'Converted and verified' ? 'success' : 'warn'
+        level: row.Status === 'Converted with warnings' ? 'warn' : 'success'
       });
     } catch (error) {
       row.Status = 'Failed';
@@ -1137,11 +1167,12 @@ ipcMain.handle('start-conversion', async (event, options) => {
 
   const summaryPath = path.join(reportDir, 'summary.txt');
   await fsp.writeFile(summaryPath, [
-    'PNG to JPEG Metadata Converter v4.4 - Summary',
+    'PNG to JPEG Metadata Converter v4.9 - Summary',
     `Started: ${startedAt.toString()}`,
     `Finished: ${new Date().toString()}`,
     `Total PNG files: ${files.length}`,
     `Converted and verified: ${successCount}`,
+    `Converted (cosmetic differences only): ${cosmeticCount}`,
     `Converted with warnings: ${warningCount}`,
     `Failed: ${failCount}`,
     '',
@@ -1172,6 +1203,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
   return {
     total: files.length,
     successCount,
+    cosmeticCount,
     warningCount,
     failCount,
     reportPath,
