@@ -1067,3 +1067,19 @@ p { margin: 0; }
 .fr-grid .fr-check { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; font-size: 0.9em; }
 .fr-actions { display: flex; gap: 8px; margin-bottom: 8px; }
 .fr-preview { padding: 8px 10px; border: 1px dashed rgba(255, 255, 255, 0.12); border-radius: 6px; max-height: 220px; overflow: auto; white-space: pre-wrap; font-family: var(--mono, ui-monospace, Consolas, monospace); font-size: 0.82em; line-height: 1.45; }
+
+/* === v4.9.1: status-link, setup modal === */
+.status-box .status-link { color: #fff; text-decoration: underline; margin-left: 4px; font-weight: 600; }
+.status-box .status-link:hover { color: #ffe27a; }
+
+.setup-card { max-width: 760px; width: 90%; max-height: 85vh; display: flex; flex-direction: column; }
+.setup-body { overflow-y: auto; padding-right: 6px; line-height: 1.5; }
+.setup-body h3 { margin: 14px 0 6px; font-size: 1.02em; }
+.setup-body h3 .muted { font-weight: 400; }
+.setup-body code { background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 3px; font-family: var(--mono, ui-monospace, Consolas, monospace); font-size: 0.9em; }
+.setup-body a { color: #6cf; text-decoration: underline; }
+.setup-body a:hover { color: #ffe27a; }
+.setup-steps { padding-left: 18px; margin: 8px 0; }
+.setup-steps > li { margin-bottom: 14px; }
+.setup-steps ul, .setup-gotchas { padding-left: 18px; margin: 4px 0 0; }
+.setup-steps ul li, .setup-gotchas li { margin-bottom: 4px; }
