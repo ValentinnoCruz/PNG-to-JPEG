@@ -1,10 +1,16 @@
 # ExifTool custom XMP configuration for the Image Metadata Manager v4.8
 # This defines the project fields found in the current Sprout/AIP JPEG metadata sample and v4.8 template-emulation mode
 # so ExifTool can write them as individual XMP tags on converted JPEG files.
+#
+# The namespace, prefix and property names are the ones the imaging camera writes and the platform reads:
+# https://sprout.common/ns/metadata/1.0/, prefix "sprout", baselineHeight, ptzParameters, ... (property names are
+# case-sensitive). The platform's plant height is baselineHeight - ptzParameters.heightToPlant from this namespace only.
+# ExifTool tag names stay BaselineHeight, PtzParameters, ... and group names are not case-sensitive, so
+# -XMP-Sprout:BaselineHeight=... still writes here.
 
 %Image::ExifTool::UserDefined = (
     'Image::ExifTool::XMP::Main' => {
-        Sprout => {
+        sprout => {
             SubDirectory => {
                 TagTable => 'Image::ExifTool::UserDefined::Sprout',
             },
@@ -13,19 +19,19 @@
 );
 
 %Image::ExifTool::UserDefined::Sprout = (
-    GROUPS => { 0 => 'XMP', 1 => 'XMP-Sprout', 2 => 'Image' },
-    NAMESPACE => { 'Sprout' => 'http://ns.valcruz.local/sprout/1.0/' },
+    GROUPS => { 0 => 'XMP', 1 => 'XMP-sprout', 2 => 'Image' },
+    NAMESPACE => { 'sprout' => 'https://sprout.common/ns/metadata/1.0/' },
     WRITABLE => 'string',
-    Timestamp           => { Writable => 'string' },
-    'Location-index'    => { Writable => 'string' },
-    CameraType          => { Writable => 'string' },
-    ImagingDevice       => { Writable => 'string' },
-    CameraTableLocation => { Writable => 'string' },
-    BaselineHeight      => { Writable => 'string' },
-    Ptz                 => { Writable => 'string' },
-    PtzParameters       => { Writable => 'string' },
-    RoomCoordinates     => { Writable => 'string' },
-    Location            => { Writable => 'string' },
+    timestamp           => { Writable => 'string' },
+    'location-index'    => { Writable => 'string' },
+    cameraType          => { Writable => 'string' },
+    imagingDevice       => { Writable => 'string' },
+    cameraTableLocation => { Writable => 'string' },
+    baselineHeight      => { Writable => 'string' },
+    ptz                 => { Writable => 'string' },
+    ptzParameters       => { Writable => 'string' },
+    roomCoordinates     => { Writable => 'string' },
+    location            => { Writable => 'string' },
 );
 
 1;  #end

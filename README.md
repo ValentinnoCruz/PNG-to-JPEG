@@ -61,7 +61,7 @@ The portable ImageMagick build is silently stalled by some corporate EDR/AV prod
 | ------------------- | -------- | -------------------- | -------------------------------------------------------------------- |
 | **ImageMagick** Q16 | ✅       | ❌ (install yourself) | Drives the actual PNG → JPEG encode. Must be on `PATH`.              |
 | **ExifTool**        | ✅       | ✅                    | Reads and writes all metadata.                                       |
-| `exiftool_config`   | ✅       | ✅                    | Defines the custom XMP-Sprout namespace (`Location-index`, etc.).    |
+| `exiftool_config`   | ✅       | ✅                    | Defines the Sprout XMP namespace the imaging camera writes (`https://sprout.common/ns/metadata/1.0/`: `baselineHeight`, `ptzParameters`, etc.). |
 
 ---
 
@@ -102,7 +102,7 @@ npm start             # runs the Electron app in dev
 ├── renderer.js            # UI logic (Converter + Editor)
 ├── index.html             # App shell + modals (Setup, About, etc.)
 ├── styles.css             # Dark theme (slate palette + accents)
-├── exiftool_config        # Custom XMP-Sprout namespace definition (required by ExifTool)
+├── exiftool_config        # Sprout XMP namespace definition, as the imaging camera writes it (required by ExifTool)
 ├── assets/                # Icons (app icon, brand glyphs)
 ├── scripts/
 │   └── fetch-tools.ps1    # Downloads ExifTool from exiftool.org

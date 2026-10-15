@@ -1203,7 +1203,7 @@ ipcMain.handle('start-conversion', async (event, options) => {
     '',
     'Important limitation:',
     'JPEG cannot store PNG transparency. Transparent pixels are flattened against the selected background color.',
-    'If the backend requires an exact XMP namespace URI instead of just matching XMP tag names, ask the dev team for the namespace URI and update exiftool_config.'
+    'Project fields are written in the Sprout XMP namespace the imaging camera uses (https://sprout.common/ns/metadata/1.0/, set in exiftool_config); the platform reads plant height there as baselineHeight - ptzParameters.heightToPlant.'
   ].join('\n'), 'utf8');
 
   return {
