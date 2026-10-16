@@ -665,6 +665,22 @@ function setSubPanel(id) {
   $$('.sub-panel').forEach((panel) => panel.classList.toggle('active', panel.id === id));
 }
 
+function resetEditorSelection(statusText) {
+  editorState.selectedIndex = -1;
+  editorState.checkedFiles.clear();
+  editorState.fullMetadata = [];
+  selectedFileLabel.textContent = 'No image selected.';
+  selectedCountLabel.textContent = `0 of ${editorState.rows.length}`;
+  selectedTechnicalSummary.textContent = 'Select an image to view details.';
+  clearImagePreview();
+  allMetadataView.innerHTML = '<span class="muted">Select an image, then click “Open All Metadata Panel.” Use the left group filters to show/hide groups.</span>';
+  clearEditForm();
+  renderMetadataTable();
+  updateEditorSummary();
+  editorStatus.textContent = statusText;
+  editorStatus.className = 'summary';
+}
+
 async function loadEditorMetadata() {
   if (!editorState.files.length) {
     editorLog('Select images or an image folder first.');
@@ -675,19 +691,7 @@ async function loadEditorMetadata() {
   try {
     const result = await window.converterApi.readImageMetadata(editorState.files);
     editorState.rows = result.rows || [];
-    editorState.selectedIndex = -1;
-    editorState.checkedFiles.clear();
-    editorState.fullMetadata = [];
-    selectedFileLabel.textContent = 'No image selected.';
-    selectedCountLabel.textContent = `0 of ${editorState.rows.length}`;
-    selectedTechnicalSummary.textContent = 'Select an image to view details.';
-    clearImagePreview();
-    allMetadataView.innerHTML = '<span class="muted">Select an image, then click “Open All Metadata Panel.” Use the left group filters to show/hide groups.</span>';
-    clearEditForm();
-    renderMetadataTable();
-    updateEditorSummary();
-    editorStatus.textContent = 'Metadata loaded. Select images with checkboxes, then check the fields you want to edit.';
-    editorStatus.className = 'summary';
+    resetEditorSelection('Metadata loaded. Select images with checkboxes, then check the fields you want to edit.');
     editorLog(`Loaded metadata for ${editorState.rows.length} image(s).`);
     if (result.errors?.length) editorLog(`${result.errors.length} file(s) had metadata read errors.`);
   } catch (error) {
@@ -695,6 +699,49 @@ async function loadEditorMetadata() {
   } finally {
     refreshMetadataBtn.disabled = false;
   }
+}
+
+// Captures what the user is currently targeting/typing so post-apply cleanup can tell whether they
+// already moved on to the next edit while the previous one was still being written.
+function editorSelectionSnapshot() {
+  const selected = editorState.rows[editorState.selectedIndex];
+  return JSON.stringify({
+    checked: Array.from(editorState.checkedFiles).sort(),
+    selected: selected ? selected.FilePath : '',
+    fields: $$('.edit-check').map((check) => {
+      const tag = check.getAttribute('data-tag');
+      const input = check.getAttribute('data-kind') === 'project' ? editInputs[tag] : advancedInputs[tag];
+      return [tag, check.checked, input ? input.value : ''];
+    })
+  });
+}
+
+async function refreshEditedRows(files) {
+  const pathKey = (filePath) => String(filePath).replace(/\\/g, '/');
+  try {
+    const result = await window.converterApi.readImageMetadata(files);
+    const fresh = new Map((result.rows || []).map((row) => [pathKey(row.FilePath), row]));
+    editorState.rows = editorState.rows.map((row) => {
+      const updated = fresh.get(pathKey(row.FilePath));
+      return updated ? { ...updated, Index: row.Index, FilePath: row.FilePath } : row;
+    });
+    renderMetadataTable();
+    const selected = editorState.rows[editorState.selectedIndex];
+    if (selected && fresh.has(pathKey(selected.FilePath))) {
+      renderRailFields(selected);
+      if (editorState.mode === 'inspect') loadFullMetadataForSelected(false);
+    }
+    if (result.errors?.length) editorLog(`${result.errors.length} file(s) had metadata read errors.`);
+  } catch (error) {
+    editorLog(`Metadata refresh failed: ${error.message}`);
+  }
+}
+
+// Writing takes a while and the editor stays usable meanwhile, so never wipe a selection or form the
+// user changed after clicking Apply, and re-read only the edited files instead of every loaded image.
+async function finishMetadataApply(editedFiles, snapshotAtApply, statusText) {
+  if (editorSelectionSnapshot() === snapshotAtApply) resetEditorSelection(statusText);
+  await refreshEditedRows(editedFiles);
 }
 
 // Converter events
@@ -905,6 +952,67 @@ $$('.sub-tab').forEach((button) => button.addEventListener('click', () => setSub
   });
 });
 
+// In-app confirmation dialog. window.confirm() must not be used: on Windows, Electron < 43 leaves the
+// page unable to receive typed text after a native alert()/confirm() closes (electron/electron#40212).
+const confirmModal = $('confirmModal');
+const confirmTitle = $('confirmTitle');
+const confirmMessage = $('confirmMessage');
+const confirmDetail = $('confirmDetail');
+const confirmNote = $('confirmNote');
+const confirmOkBtn = $('confirmOkBtn');
+const confirmCancelBtn = $('confirmCancelBtn');
+
+function confirmInApp({ title = 'Confirm', message = '', detail = '', note = '', confirmLabel = 'OK', cancelLabel = 'Cancel' } = {}) {
+  if (!confirmModal.hidden) return Promise.resolve(false);
+
+  return new Promise((resolve) => {
+    const previouslyFocused = document.activeElement;
+    confirmTitle.textContent = title;
+    confirmMessage.textContent = message;
+    confirmDetail.textContent = detail;
+    confirmDetail.hidden = !detail;
+    confirmNote.textContent = note;
+    confirmNote.hidden = !note;
+    confirmOkBtn.textContent = confirmLabel;
+    confirmCancelBtn.textContent = cancelLabel;
+
+    const onOk = () => settle(true);
+    const onCancel = () => settle(false);
+    // Keep focus inside the dialog when the backdrop is clicked.
+    const onBackdropMouseDown = (event) => { if (event.target === confirmModal) event.preventDefault(); };
+    const onKeyDown = (event) => {
+      // Stop editor shortcuts (B/E/I) and other modal handlers from acting behind the dialog.
+      event.stopPropagation();
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        settle(false);
+      } else if (event.key === 'Tab') {
+        event.preventDefault();
+        (document.activeElement === confirmOkBtn ? confirmCancelBtn : confirmOkBtn).focus();
+      }
+    };
+
+    function settle(result) {
+      confirmModal.hidden = true;
+      confirmOkBtn.removeEventListener('click', onOk);
+      confirmCancelBtn.removeEventListener('click', onCancel);
+      confirmModal.removeEventListener('mousedown', onBackdropMouseDown);
+      confirmModal.removeEventListener('keydown', onKeyDown);
+      if (previouslyFocused && document.contains(previouslyFocused) && typeof previouslyFocused.focus === 'function') {
+        previouslyFocused.focus();
+      }
+      resolve(result);
+    }
+
+    confirmOkBtn.addEventListener('click', onOk);
+    confirmCancelBtn.addEventListener('click', onCancel);
+    confirmModal.addEventListener('mousedown', onBackdropMouseDown);
+    confirmModal.addEventListener('keydown', onKeyDown);
+    confirmModal.hidden = false;
+    confirmOkBtn.focus();
+  });
+}
+
 applySelectedBtn.addEventListener('click', async () => {
   const files = selectedFilesForApply();
   if (!files.length) return editorLog('Select one or more images first.');
@@ -913,10 +1021,17 @@ applySelectedBtn.addEventListener('click', async () => {
   if (!countEdits(edits)) return editorLog('No checked fields with values to apply.');
 
   const fields = [...Object.keys(edits.projectEdits), ...Object.keys(edits.advancedEdits).map((f) => `Advanced:${f}`)];
-  const confirmed = confirm(`Apply ONLY these checked fields to ${files.length} image(s)?\n\n${fields.join(', ')}\n\nAll other metadata fields will remain untouched.`);
+  const confirmed = await confirmInApp({
+    title: 'Apply metadata edits',
+    message: `Apply ONLY these checked fields to ${files.length} image(s)?`,
+    detail: fields.join(', '),
+    note: 'All other metadata fields will remain untouched.',
+    confirmLabel: 'Apply'
+  });
   if (!confirmed) return;
 
   applySelectedBtn.disabled = true;
+  const snapshot = editorSelectionSnapshot();
   try {
     const result = await window.converterApi.applyMetadataEdits({
       files,
@@ -926,7 +1041,7 @@ applySelectedBtn.addEventListener('click', async () => {
       backupBeforeEdit: editorBackupInput.checked
     });
     editorLog(`Metadata update complete for ${files.length} image(s). Report: ${result.reportPath}`);
-    await loadEditorMetadata();
+    await finishMetadataApply(files, snapshot, `Metadata update complete for ${files.length} image(s). Select the next image(s) to edit.`);
   } catch (error) {
     editorLog(`Update failed: ${error.message}`);
   } finally {
@@ -1221,7 +1336,11 @@ if (frApplyBtn) frApplyBtn.addEventListener('click', async () => {
 
   const field = result.field;
   const isProject = PROJECT_TAGS.includes(field);
-  const confirmed = confirm(`Replace in ${result.matches.length} file(s) — field "${field}".\n\nProceed?`);
+  const confirmed = await confirmInApp({
+    title: 'Apply find & replace',
+    message: `Replace in ${result.matches.length} file(s) — field "${field}".\n\nProceed?`,
+    confirmLabel: 'Replace'
+  });
   if (!confirmed) return;
 
   const fileEdits = result.matches.map((m) => ({
@@ -1231,6 +1350,7 @@ if (frApplyBtn) frApplyBtn.addEventListener('click', async () => {
   }));
 
   frApplyBtn.disabled = true;
+  const snapshot = editorSelectionSnapshot();
   try {
     const apiResult = await window.converterApi.applyMetadataEdits({
       fileEdits,
@@ -1239,7 +1359,7 @@ if (frApplyBtn) frApplyBtn.addEventListener('click', async () => {
     });
     editorLog(`Find & Replace applied to ${result.matches.length} file(s). Report: ${apiResult.reportPath}`);
     frPreviewOut.textContent = `Applied to ${result.matches.length} file(s). Report: ${apiResult.reportPath}`;
-    await loadEditorMetadata();
+    await finishMetadataApply(result.matches.map((m) => m.file), snapshot, `Find & Replace applied to ${result.matches.length} file(s). Select the next image(s) to edit.`);
   } catch (err) {
     editorLog(`Find & Replace failed: ${err.message}`);
   } finally {

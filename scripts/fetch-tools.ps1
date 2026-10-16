@@ -28,7 +28,9 @@ function Download-File {
     param([string]$Url, [string]$OutPath)
     Write-Host "  downloading $Url" -ForegroundColor Cyan
     $pp = $ProgressPreference; $ProgressPreference = 'SilentlyContinue'
-    try { Invoke-WebRequest -Uri $Url -OutFile $OutPath -UseBasicParsing }
+    # Non-browser User-Agent: SourceForge serves an HTML "download starting" page to browser-like agents
+    # (PowerShell's default) instead of redirecting to the file.
+    try { Invoke-WebRequest -Uri $Url -OutFile $OutPath -UseBasicParsing -UserAgent 'Wget' }
     finally { $ProgressPreference = $pp }
 }
 
@@ -51,7 +53,8 @@ if ((Test-Path $exifExe) -and -not $Force) {
     }
     Write-Host "[ExifTool] target version: $ExifToolVersion" -ForegroundColor Yellow
 
-    $url     = "https://exiftool.org/exiftool-$($ExifToolVersion)_64.zip"
+    # exiftool.org links its Windows builds to SourceForge; the old exiftool.org/exiftool-<ver>_64.zip URL is a 404.
+    $url     = "https://sourceforge.net/projects/exiftool/files/exiftool-$($ExifToolVersion)_64.zip/download"
     $zipPath = Join-Path $tmpRoot "exiftool-$ExifToolVersion.zip"
     Download-File -Url $url -OutPath $zipPath
 
