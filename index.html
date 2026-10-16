@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PNG2JPEG v4.10.1</title>
+  <title>PNG2JPEG v4.10.2</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-icon">▣</span><span>PNG2JPEG v4.10.1</span></div>
+      <div class="brand"><span class="brand-icon">▣</span><span>PNG2JPEG v4.10.2</span></div>
       <nav class="top-tabs">
         <button id="convertTabBtn" class="top-tab active">PNG to JPEG Converter</button>
         <button id="editorTabBtn" class="top-tab">Metadata Viewer / Editor</button>
@@ -467,6 +467,23 @@
             <button id="aboutOpenSetupBtn">🛠 Setup &amp; Dependencies</button>
             <button id="aboutOpenRepoBtn">View on GitHub</button>
             <button id="aboutCloseBtn2" class="ghost">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="confirmModal" class="modal-overlay" hidden>
+      <div class="modal-card confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage" tabindex="-1">
+        <header class="modal-header">
+          <h2 id="confirmTitle">Confirm</h2>
+        </header>
+        <div class="modal-body">
+          <p id="confirmMessage" class="confirm-message"></p>
+          <div id="confirmDetail" class="confirm-detail" hidden></div>
+          <p id="confirmNote" class="muted" hidden></p>
+          <div class="modal-actions confirm-actions">
+            <button id="confirmCancelBtn" type="button">Cancel</button>
+            <button id="confirmOkBtn" type="button" class="primary">OK</button>
           </div>
         </div>
       </div>
